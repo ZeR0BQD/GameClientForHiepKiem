@@ -1,0 +1,9 @@
+<!--
+time: thời gian mở 10:00 (10 giờ 0 phút) (nếu nhiều thời gian thì cách nhau bởi dấu ;)
+pretime: thời gian chuẩn bị, đơn vị giây
+-->
+<Config>
+    <OpenTime time="01:00;23:40" pretime="600"/>
+    <SongSignPos NpcId="55" MapId="75" PosX="1399" PosY="983" />
+    <JinSignPos NpcId="51" MapId="75" PosX="12423" PosY="7876" />
+</Config>

@@ -1,0 +1,29 @@
+﻿namespace GameClient
+{
+    public enum TCPGameServerCmds
+    {
+        CMD_LOGIN_ON1 = 1,
+        CMD_LOGIN_ON2 = 20,
+        CMD_LOG_OUT = 22,
+        CMD_SPR_CLIENTHEART = 23,
+        CMD_LOGIN_ON = 100,
+        CMD_ROLE_LIST = 101,
+        CMD_CREATE_ROLE = 102,
+        CMD_INIT_GAME = 104,
+        CMD_PLAY_GAME = 106,
+        CMD_SPR_MOVE = 107,
+        CMD_SPR_POSITION = 112,
+        CMD_SPR_MAPCHANGE = 123,
+        CMD_SPR_ENTERMAP = 124,
+        CMD_SPR_USEGOODS = 160,
+        CMD_SPR_CHANGEPOS = 161,
+        CMD_SPR_NOTIFYCHGMAP = 162,
+        CMD_SPR_UPDATE_ROLEDATA = 166,
+        CMD_KT_GM_COMMAND = 50000,
+        CMD_KT_CLICKON_NPC = 50004,
+        CMD_KT_C2G_CLIENTREVIVE = 50011,
+        CMD_KT_G2C_ITEMDIALOG = 50030,
+        CMD_KT_C2G_ITEMDIALOG = 50031,
+        CMD_KT_C2G_AUTOPATH_CHANGEMAP = 50038,
+    }
+}
