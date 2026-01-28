@@ -9,6 +9,9 @@ namespace GameClient
 {
     public class AIClient
     {
+        // Client ID duy nhat, thread-safe
+        private static int _nextClientId = 0;
+        private readonly int _clientId;
         public long UserID;
         public string UserName;
         public string Password;
@@ -35,7 +38,7 @@ namespace GameClient
         private System.Timers.Timer timer;
 
 #if DEBUG
-        private const long DelayMove = 6000;
+        private const long DelayMove = 16000;
 #else
         private const long DelayMove = 60000;
 #endif
@@ -46,8 +49,13 @@ namespace GameClient
 
         private SpriteHeart? SpriteHeart;
 
+        // Target position cho Observer pattern
+        private Position? _targetPosition = null;
+        private bool IsMove = false;
+
         public AIClient(int serverID, long userId, string userName)
         {
+            _clientId = Interlocked.Increment(ref _nextClientId);
             Console.WriteLine("Connect to server: {0}:{1} - ID: {2}", AIManager.Server, AIManager.ServerPort, AIManager.ServerID);
             UserID = userId;
             ServerID = serverID;
@@ -78,8 +86,19 @@ namespace GameClient
             }
 
             //return;
+            if (IsOnline)
+            {
+                AutoMoveAround();
 
-            AutoMove();
+                //if (Global.GetCurrentTime() < MoveTick + DelayMove)
+                //{
+                //    return;
+                //}
+                //MoveTick = Global.GetCurrentTime();
+
+                //SendMove(new Position() { PosX = 5711, PosY = 3022 });
+                //Console.WriteLine("SendMove");
+            }
         }
 
         private void CheckReconnect()
@@ -105,19 +124,34 @@ namespace GameClient
             }
         }
 
-        private void AutoMove()
-        {
-            if (Global.GetCurrentTime() >= MoveTick + DelayMove)
-            {
-                MoveTick = Global.GetCurrentTime();
 
-                var position = AIManager.Points.OrderBy(p => Guid.NewGuid()).FirstOrDefault();
-                if (position == null)
-                {
-                    return;
-                }
-                SendMove(position);
+        // Di chuyen tu dong
+        private void AutoMoveAround()
+        {
+            // Check thoi gian delay
+            if (Global.GetCurrentTime() < MoveTick + DelayMove)
+            {
+                return;
             }
+            MoveTick = Global.GetCurrentTime();
+
+            var position = AIManager.Points.OrderBy(p => Guid.NewGuid()).FirstOrDefault();
+            if (position == null)
+            {
+                return;
+            }
+
+            // Add jitter
+            var random = new Random();
+            var newPosition = new Position
+            {
+                PosX = position.PosX + random.Next(-10, 10),
+                PosY = position.PosY + random.Next(-10, 10),
+                MapId = position.MapId
+            };
+
+            _targetPosition = newPosition;
+            SendMove(_targetPosition);
         }
 
         #region Event packet
@@ -133,11 +167,14 @@ namespace GameClient
 #if DEBUG
             if (command != TCPGameServerCmds.CMD_SPR_UPDATE_ROLEDATA)
             {
-                //Console.WriteLine(command);
+                //Console.WriteLine("TCPGameServerCmds.{0}\n", command);
             }
 #endif
+
+            Console.WriteLine("TCPGameServerCmds.{0}", command);
             if (command == TCPGameServerCmds.CMD_LOGIN_ON)
             {
+                
                 string strData = new UTF8Encoding().GetString(tcpInPacket.GetPacketBytes(), 0, tcpInPacket.PacketDataSize);
                 var param = strData.Split(":");
                 Token = Convert.ToInt32(param[0]);
@@ -146,6 +183,7 @@ namespace GameClient
             }
             else if (command == TCPGameServerCmds.CMD_ROLE_LIST)
             {
+                Console.WriteLine("TCPGameServerCmds.{0}\n", command);
                 string strData = new UTF8Encoding().GetString(tcpInPacket.GetPacketBytes(), 0, tcpInPacket.PacketDataSize);
                 var param = strData.Split(":");
                 string[] roles = param[1].Split('|');
@@ -180,10 +218,50 @@ namespace GameClient
             {
                 EnterMap();
                 IsOnline = true;
+
+                // Notify Observer
+                ClientStateObserver.Notify(command, new CmdEventArgs
+                {
+                    ClientId = _clientId,
+                    RoleId = RoleID,
+                    RoleName = RoleData?.RoleName,
+                    Cmd = command
+                });
+
                 LoginSuccess?.Invoke(this);
             }
             else if (command == TCPGameServerCmds.CMD_SPR_MOVE)
             {
+                // CMD_SPR_MOVE dung binary format (SpriteMoveData)
+                var moveData = DataHelper.BytesToObject<SpriteMoveData>(tcpInPacket.GetPacketBytes(), 0, tcpInPacket.PacketDataSize);
+                if (moveData != null)
+                {
+                    Console.WriteLine("[CMD_SPR_MOVE] RoleID: {0}, From: {1}/{2}, To: {3}/{4}",
+                        moveData.RoleID, moveData.FromX, moveData.FromY, moveData.ToX, moveData.ToY);
+                }
+            }
+            else if (command == TCPGameServerCmds.CMD_SPR_CHANGEPOS)
+            {
+                string strData = new UTF8Encoding().GetString(tcpInPacket.GetPacketBytes(), 0, tcpInPacket.PacketDataSize);
+                var param = strData.Split(":");
+                var receivedRoleId = Convert.ToInt32(param[0]);
+
+                // Chi xu ly neu la cua client hien tai
+                if (receivedRoleId == RoleData?.RoleID)
+                {
+                    RoleData.PosX = Convert.ToInt32(param[1]);
+                    RoleData.PosY = Convert.ToInt32(param[2]);
+
+                    // Notify Observer
+                    ClientStateObserver.Notify(command, new CmdEventArgs
+                    {
+                        ClientId = _clientId,
+                        RoleId = RoleID,
+                        RoleName = RoleData?.RoleName,
+                        Cmd = command,
+                        Data = new Position { PosX = RoleData.PosX, PosY = RoleData.PosY }
+                    });
+                }
             }
             return true;
         }
@@ -281,7 +359,8 @@ namespace GameClient
 
         private void InitGame()
         {
-            SpriteHeart = new SpriteHeart(loginClient, RoleID, Token);
+            //SpriteHeart = new SpriteHeart(loginClient, RoleID, Token);
+            //SpriteHeart.Start();
             string strcmd = string.Format("{0}:{1}:{2}:39", this.UserID, this.RoleID, "ai");
             var tcpOutPacket = TCPOutPacket.MakeTCPOutPacket(loginClient.OutPacketPool, strcmd, (int)TCPGameServerCmds.CMD_INIT_GAME);
             loginClient.SendData(tcpOutPacket);
@@ -334,19 +413,7 @@ namespace GameClient
             }
             try
             {
-                var from = new UnityEngine.Vector2(RoleData.PosX, RoleData.PosY);
-                var to = new UnityEngine.Vector2(position.PosX, position.PosY);
-                var paths = GScene.Instance.FindPath(from, to).Select(p => string.Format("{0}_{1}", p.x, p.y));
-
-                var random = new Random();
-                var newPosition = new Position()
-                {
-                    PosX = position.PosX,
-                    PosY = position.PosY,
-                    MapId = position.MapId,
-                };
-                newPosition.PosX += random.Next(-10, 10);
-                newPosition.PosY += random.Next(-10, 10);
+                var newPosition = position;
 
                 Console.WriteLine("Auto move to {0}/{1}", newPosition.PosX, newPosition.PosY);
                 SpriteMoveData moveData = new SpriteMoveData()
@@ -356,7 +423,6 @@ namespace GameClient
                     FromY = RoleData.PosY,
                     ToX = newPosition.PosX,
                     ToY = newPosition.PosY,
-                    //PathString = string.Join("|", paths),
                     PathString = "",
                 };
                 byte[] cmdData = DataHelper.ObjectToBytes<SpriteMoveData>(moveData);

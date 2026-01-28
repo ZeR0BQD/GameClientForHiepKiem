@@ -25,7 +25,7 @@ namespace GameClient
         public static List<Position> Points = new List<Position>();
 
         private static System.Timers.Timer timer;
-        
+
         private const string Account = "itsgamecenter2025{0}";
         //private const string Account = "tpbo0aoakj3gchc8lp{0}";
         private const string Password = "Its@Gamecenter@2025";
@@ -35,6 +35,10 @@ namespace GameClient
             Console.WriteLine("Loadding account info...");
 
             GScene.Instance.Init("BaLangHuyen");
+
+            // Subscribe cac CMD tu Observer
+            ClientStateObserver.Subscribe(TCPGameServerCmds.CMD_PLAY_GAME, OnClientOnline);
+            ClientStateObserver.Subscribe(TCPGameServerCmds.CMD_SPR_CHANGEPOS, OnClientMoved);
 
             for (int i = 0; i < MaxRole; i++)
             {
@@ -52,6 +56,23 @@ namespace GameClient
             timer = new System.Timers.Timer(2000);
             timer.Elapsed += Timer_Elapsed;
             timer.Start();
+        }
+
+        // Handler: Client da online
+        private static void OnClientOnline(CmdEventArgs args)
+        {
+            Console.WriteLine("[AIManager] Client #{0} ({1}) da online", args.ClientId, args.RoleName);
+        }
+
+        // Handler: Client da di chuyen
+        private static void OnClientMoved(CmdEventArgs args)
+        {
+            var pos = args.Data as Position;
+            if (pos != null)
+            {
+                Console.WriteLine("[AIManager] Client #{0} ({1}) da toi vi tri {2}/{3}",
+                    args.ClientId, args.RoleName, pos.PosX, pos.PosY);
+            }
         }
 
         private static void Timer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
