@@ -1,44 +1,46 @@
-﻿using System.Text;
+﻿using GameClient;
 using GameClient.Data;
+using GameClient.MapConfig;
 using GameClient.Scenes;
 using HSGameEngine.GameEngine.Network;
 using HSGameEngine.GameEngine.Network.Protocol;
+using Org.BouncyCastle.Utilities;
 using Server.Tools;
+using System.Text;
+using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace GameClient
 {
     public class AIClient
     {
-        // Client ID duy nhat, thread-safe
-        private static int _nextClientId = 0;
-        private readonly int _clientId;
         public long UserID;
         public string UserName;
-        public string Password;
-        public string UserToken;
-        public string AccessToken;
+        public string? Password;
+        public string? UserToken;
+        public string? AccessToken;
         public int UserIsAdult;
         public int RoleRandToken;
         public int RoleID;
         public int ServerID;
         public int Token;
 
-        public RoleData RoleData;
+        public RoleData? RoleData;
 
         private const int VerSign = 20140624;
         private const string Key = "Jab2hKa821bJac2Laocb2acah2acacak";
 
-        private TCPClient login2Client;
+        private TCPClient? login2Client;
         private TCPClient loginClient;
 
         private bool IsOnline = false;
-        public Action NextStep { get; set; }
-        public Action<AIClient> LoginSuccess { get; set; }
+        public Action? NextStep { get; set; }
+        public Action<AIClient>? LoginSuccess { get; set; }
 
         private System.Timers.Timer timer;
 
 #if DEBUG
-        private const long DelayMove = 16000;
+        private const long DelayMove = 6000;
 #else
         private const long DelayMove = 60000;
 #endif
@@ -49,13 +51,9 @@ namespace GameClient
 
         private SpriteHeart? SpriteHeart;
 
-        // Target position cho Observer pattern
-        private Position? _targetPosition = null;
-        private bool IsMove = false;
-
+        private bool _canMove = true;
         public AIClient(int serverID, long userId, string userName)
         {
-            _clientId = Interlocked.Increment(ref _nextClientId);
             Console.WriteLine("Connect to server: {0}:{1} - ID: {2}", AIManager.Server, AIManager.ServerPort, AIManager.ServerID);
             UserID = userId;
             ServerID = serverID;
@@ -75,7 +73,7 @@ namespace GameClient
             timer.Elapsed += Timer_Elapsed;
             timer.Start();
         }
-
+        #region Timer_Elapsed
         private void Timer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
         {
             CheckReconnect();
@@ -85,22 +83,13 @@ namespace GameClient
                 return;
             }
 
-            //return;
-            if (IsOnline)
+            if (IsOnline && _canMove)
             {
-                AutoMoveAround();
-
-                //if (Global.GetCurrentTime() < MoveTick + DelayMove)
-                //{
-                //    return;
-                //}
-                //MoveTick = Global.GetCurrentTime();
-
-                //SendMove(new Position() { PosX = 5711, PosY = 3022 });
-                //Console.WriteLine("SendMove");
+                //MoveToXaPhu();
             }
         }
-
+        #endregion
+        #region CheckReconnect
         private void CheckReconnect()
         {
             if (loginClient.Connected == false && Global.GetCurrentTime() >= ReconnectTick + Reconnect)
@@ -119,40 +108,121 @@ namespace GameClient
                 }
                 else
                 {
-                    Login(UserName, Password);
+                    Login(UserName, Password!);
+                }
+            }
+        }
+        #endregion
+        #region Các hàm xử lý hành động
+        /// <summary>
+        /// Các hàm xử lý hành động
+        /// </summary>
+        /// 
+
+        public void SetUpRoleData()
+        {
+            SendGMCommand("SetLevel 60");
+            if (RoleData?.RoleSex == 0)
+            {
+                SendGMCommand("JoinFaction 2");
+            }
+            else if (RoleData?.RoleSex == 1)
+            {
+                SendGMCommand("JoinFaction 3");
+            }
+        }
+
+        public void MoveToXaPhu()
+        {
+            int currentMap = this.RoleData?.MapCode ?? 0;
+
+            var xaPhu = XaPhuManager.GetRandom_XaPhu(currentMap);
+            if (xaPhu != null)
+            {
+                Console.WriteLine($"[AIClient]<MoveToXaPhu> Di chuyen den Xa Phu: X={xaPhu.X}, Y={xaPhu.Y}");
+                SendMove(new Position() { PosX = xaPhu.X, PosY = xaPhu.Y });
+            }
+            else
+            {
+                Console.WriteLine($"[AIClient]<MoveToXaPhu> Khong tim thay Xa Phu tren map {currentMap}");
+            }
+        }
+
+        public void ActionSendNPCSelection(int npcID, int dialogID, int selectionID, DialogItemSelectionInfo? selectItemInfo, Dictionary<int, string>? otherParams)
+        {
+            SendNPCSelection(npcID, dialogID, selectionID, selectItemInfo, otherParams);
+            Console.WriteLine("SendNPCSelection");
+        }
+
+        public void AutoMoveAround()
+        {
+            if (Global.GetCurrentTime() >= MoveTick + DelayMove)
+            {
+                MoveTick = Global.GetCurrentTime();
+                if (RoleData == null)
+                {
+                    return;
+                }
+
+                //var position = new Position()
+                //{
+                //    MapId = RoleData.MapCode,
+                //    PosX = RoleData.PosX,
+                //    PosY = RoleData.PosY,
+                //};
+                var position = AIManager.Points.OrderBy(p => Guid.NewGuid()).FirstOrDefault();
+                if (position == null)
+                {
+                    Console.WriteLine("[AIClient]<AutoMoveAround> Khong co diem nao trong AIManager.Points");
+                    return;
+                }
+                try
+                {
+                    var random = new System.Random();
+                    var newPosition = new Position()
+                    {
+                        PosX = position.PosX,
+                        PosY = position.PosY,
+                        MapId = position.MapId,
+                    };
+                    newPosition.PosX += random.Next(-10, 10);
+                    newPosition.PosY += random.Next(-10, 10);
+
+                    var from = new Vector2(RoleData.PosX, RoleData.PosY);
+                    var to = new Vector2(newPosition.PosX, newPosition.PosY);
+
+                    var paths = GScene.Instance.FindPath(RoleData, from, to);
+                    if (paths == null || paths.Count == 0)
+                    {
+                        Console.WriteLine("[AIClient]<AutoMoveAround> Khong tim thay duong di");
+                        return;
+                    }
+                    var pathString = string.Join("|", paths.Select(s => string.Format("{0}_{1}", (int)s.x, (int)s.y)).ToArray());
+
+                    SpriteMoveData moveData = new SpriteMoveData()
+                    {
+                        RoleID = RoleID,
+                        FromX = RoleData.PosX,
+                        FromY = RoleData.PosY,
+                        ToX = newPosition.PosX,
+                        ToY = newPosition.PosY,
+                        //PathString = pathString,
+                        PathString = "",
+                    };
+                    byte[] cmdData = DataHelper.ObjectToBytes<SpriteMoveData>(moveData);
+                    loginClient.SendData(TCPOutPacket.MakeTCPOutPacket(loginClient.OutPacketPool, cmdData, 0, cmdData.Length, (int)(TCPGameServerCmds.CMD_SPR_MOVE)));
+
+                    RoleData.PosX = newPosition.PosX;
+                    RoleData.PosY = newPosition.PosY;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
                 }
             }
         }
 
-
-        // Di chuyen tu dong
-        private void AutoMoveAround()
-        {
-            // Check thoi gian delay
-            if (Global.GetCurrentTime() < MoveTick + DelayMove)
-            {
-                return;
-            }
-            MoveTick = Global.GetCurrentTime();
-
-            var position = AIManager.Points.OrderBy(p => Guid.NewGuid()).FirstOrDefault();
-            if (position == null)
-            {
-                return;
-            }
-
-            // Add jitter
-            var random = new Random();
-            var newPosition = new Position
-            {
-                PosX = position.PosX + random.Next(-10, 10),
-                PosY = position.PosY + random.Next(-10, 10),
-                MapId = position.MapId
-            };
-
-            _targetPosition = newPosition;
-            SendMove(_targetPosition);
-        }
+        #endregion
 
         #region Event packet
 
@@ -164,17 +234,23 @@ namespace GameClient
                 return false;
             }
             var command = (TCPGameServerCmds)tcpInPacket.PacketCmdID;
+
+            // Console.WriteLine("Command {0}: {1}", count, command);
+            // count++;
 #if DEBUG
             if (command != TCPGameServerCmds.CMD_SPR_UPDATE_ROLEDATA)
             {
-                //Console.WriteLine("TCPGameServerCmds.{0}\n", command);
+                // var data = DataHelper.BytesToObject<RoleData>(tcpInPacket.GetPacketBytes(), 0, tcpInPacket.PacketDataSize) as RoleData;
+                // Console.WriteLine("RoleData");
+                // if (data != null && data.RoleID != 0)
+                // {
+                //     Console.WriteLine("RoleData: Name: {0}, Map: {1}, Pos: X:{2}, Y:{3}", data.RoleName, data.MapCode, data.PosX, data.PosY);
+                // }
             }
 #endif
 
-            Console.WriteLine("TCPGameServerCmds.{0}", command);
             if (command == TCPGameServerCmds.CMD_LOGIN_ON)
             {
-                
                 string strData = new UTF8Encoding().GetString(tcpInPacket.GetPacketBytes(), 0, tcpInPacket.PacketDataSize);
                 var param = strData.Split(":");
                 Token = Convert.ToInt32(param[0]);
@@ -183,7 +259,6 @@ namespace GameClient
             }
             else if (command == TCPGameServerCmds.CMD_ROLE_LIST)
             {
-                Console.WriteLine("TCPGameServerCmds.{0}\n", command);
                 string strData = new UTF8Encoding().GetString(tcpInPacket.GetPacketBytes(), 0, tcpInPacket.PacketDataSize);
                 var param = strData.Split(":");
                 string[] roles = param[1].Split('|');
@@ -216,53 +291,35 @@ namespace GameClient
             }
             else if (command == TCPGameServerCmds.CMD_PLAY_GAME)
             {
+                SetUpRoleData();
                 EnterMap();
-                IsOnline = true;
-
-                // Notify Observer
-                ClientStateObserver.Notify(command, new CmdEventArgs
+                if (!IsOnline)
                 {
-                    ClientId = _clientId,
-                    RoleId = RoleID,
-                    RoleName = RoleData?.RoleName,
-                    Cmd = command
-                });
-
-                LoginSuccess?.Invoke(this);
-            }
-            else if (command == TCPGameServerCmds.CMD_SPR_MOVE)
-            {
-                // CMD_SPR_MOVE dung binary format (SpriteMoveData)
-                var moveData = DataHelper.BytesToObject<SpriteMoveData>(tcpInPacket.GetPacketBytes(), 0, tcpInPacket.PacketDataSize);
-                if (moveData != null)
-                {
-                    Console.WriteLine("[CMD_SPR_MOVE] RoleID: {0}, From: {1}/{2}, To: {3}/{4}",
-                        moveData.RoleID, moveData.FromX, moveData.FromY, moveData.ToX, moveData.ToY);
+                    IsOnline = true;
+                    LoginSuccess?.Invoke(this);
                 }
             }
-            else if (command == TCPGameServerCmds.CMD_SPR_CHANGEPOS)
+            else if (command == TCPGameServerCmds.CMD_KT_G2C_NPCDIALOG)
+            {
+                G2C_LuaNPCDialog result = DataHelper.BytesToObject<G2C_LuaNPCDialog>(tcpInPacket.GetPacketBytes(), 0, tcpInPacket.PacketDataSize);
+                ActionSendNPCSelection(result.NPCID, result.ID, 2, null, null);
+            }
+            else if (command == TCPGameServerCmds.CMD_SPR_NOTIFYCHGMAP)
             {
                 string strData = new UTF8Encoding().GetString(tcpInPacket.GetPacketBytes(), 0, tcpInPacket.PacketDataSize);
                 var param = strData.Split(":");
-                var receivedRoleId = Convert.ToInt32(param[0]);
-
-                // Chi xu ly neu la cua client hien tai
-                if (receivedRoleId == RoleData?.RoleID)
-                {
-                    RoleData.PosX = Convert.ToInt32(param[1]);
-                    RoleData.PosY = Convert.ToInt32(param[2]);
-
-                    // Notify Observer
-                    ClientStateObserver.Notify(command, new CmdEventArgs
-                    {
-                        ClientId = _clientId,
-                        RoleId = RoleID,
-                        RoleName = RoleData?.RoleName,
-                        Cmd = command,
-                        Data = new Position { PosX = RoleData.PosX, PosY = RoleData.PosY }
-                    });
-                }
+                CMD_SPR_NOTIFYCHGMAP(param);
             }
+            else if (command == TCPGameServerCmds.CMD_SPR_MAPCHANGE)
+            {
+                int mapID = DataHelper.BytesToObject<SCMapChange>(tcpInPacket.GetPacketBytes(), 0, tcpInPacket.PacketDataSize).MapCode;
+                MapConfigHelper.InitSceneByMapId(mapID);
+                GamePlay();
+            }
+            //if (RoleData?.MapCode != 0)
+            //{
+            //    SpritePosition();
+            //}
             return true;
         }
 
@@ -281,10 +338,13 @@ namespace GameClient
             UserToken = fields[2];
             UserIsAdult = Convert.ToInt32(fields[3]);
 
-            login2Client.SocketConnect -= LoginClient_SocketConnect;
-            login2Client.MyTCPInPacket.TCPCmdPacketEvent -= MyTCPInPacket_TCPCmdPacketEvent;
-            login2Client.Destroy();
-            login2Client = null;
+            if (login2Client != null)
+            {
+                login2Client.SocketConnect -= LoginClient_SocketConnect;
+                login2Client.MyTCPInPacket.TCPCmdPacketEvent -= MyTCPInPacket_TCPCmdPacketEvent;
+                login2Client.Destroy();
+                login2Client = null;
+            }
 
             loginClient.Connect(AIManager.Server, AIManager.ServerPort);
 
@@ -350,6 +410,77 @@ namespace GameClient
 
         #region Commands
 
+        public void NPCClick(int npcID)
+        {
+            if (RoleData == null)
+            {
+                return;
+            }
+            Console.WriteLine("NPCClick ID: {0}", npcID);
+            string strcmd = npcID.ToString();
+
+            loginClient.SendData(TCPOutPacket.MakeTCPOutPacket(loginClient.OutPacketPool, strcmd, (int)(TCPGameServerCmds.CMD_KT_CLICKON_NPC)));
+        }
+        private void CMD_SPR_NOTIFYCHGMAP(params string[] args)
+        {
+            Thread.Sleep(1000);
+            if (RoleData == null)
+            {
+                return;
+            }
+
+            int teleportID = Convert.ToInt32(args[0]);
+            int toMapCode = Convert.ToInt32(args[1]);
+            int toMapX = Convert.ToInt32(args[2]);
+            int toMapY = Convert.ToInt32(args[3]);
+            SCMapChange mapChangeData = new SCMapChange
+            {
+                RoleID = RoleID,
+                TeleportID = -1,
+                MapCode = toMapCode,
+                PosX = toMapX,
+                PosY = toMapY,
+            };
+
+            RoleData.MapCode = mapChangeData.MapCode;
+            RoleData.PosX = toMapX;
+            RoleData.PosY = toMapY;
+
+            byte[] bData = DataHelper.ObjectToBytes<SCMapChange>(mapChangeData);
+            loginClient.SendData(TCPOutPacket.MakeTCPOutPacket(loginClient.OutPacketPool, bData, 0, bData.Length, (int)(TCPGameServerCmds.CMD_SPR_MAPCHANGE)));
+        }
+
+        protected void SpritePosition()
+        {
+            Console.WriteLine("SpritePosition");
+            if (RoleData == null)
+            {
+                return;
+            }
+            try
+            {
+                byte[] bData = DataHelper.ObjectToBytes<RoleData>(new RoleData()
+                {
+                    RoleID = RoleData.RoleID,
+                    MapCode = RoleData.MapCode,
+                    PosX = RoleData.PosX,
+                    PosY = RoleData.PosY,
+                });
+                loginClient.SendData(TCPOutPacket.MakeTCPOutPacket(loginClient.OutPacketPool, bData, 0, bData.Length, (int)(TCPGameServerCmds.CMD_SPR_POSITION)));
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AIClient]<SpritePosition> Error: {ex.Message}");
+            }
+
+        }
+
+        public void SendGMCommand(string command)
+        {
+            byte[] bytes = KTCrypto.Encrypt(command);
+            loginClient.SendData(TCPOutPacket.MakeTCPOutPacket(loginClient.OutPacketPool, bytes, 0, bytes.Length, (int)(TCPGameServerCmds.CMD_KT_GM_COMMAND)));
+        }
         private void GetRoleList()
         {
             string strcmd = string.Format("{0}:{1}", UserID, ServerID);
@@ -359,8 +490,7 @@ namespace GameClient
 
         private void InitGame()
         {
-            //SpriteHeart = new SpriteHeart(loginClient, RoleID, Token);
-            //SpriteHeart.Start();
+            SpriteHeart = new SpriteHeart(loginClient, RoleID, Token);
             string strcmd = string.Format("{0}:{1}:{2}:39", this.UserID, this.RoleID, "ai");
             var tcpOutPacket = TCPOutPacket.MakeTCPOutPacket(loginClient.OutPacketPool, strcmd, (int)TCPGameServerCmds.CMD_INIT_GAME);
             loginClient.SendData(tcpOutPacket);
@@ -368,7 +498,7 @@ namespace GameClient
 
         private void CreateNewRole()
         {
-            Random rand = new Random();
+            System.Random rand = new System.Random();
             int series = rand.Next(1, 5);
             int sex = rand.Next(0, 1);
             //Hệ kim chỉ có Nam
@@ -395,17 +525,25 @@ namespace GameClient
 
         private void EnterMap()
         {
-            string strcmd = "";
-            var tcpOutPacket = TCPOutPacket.MakeTCPOutPacket(loginClient.OutPacketPool, strcmd, (int)TCPGameServerCmds.CMD_SPR_ENTERMAP);
-            loginClient.SendData(tcpOutPacket);
+            byte[] bData = new ASCIIEncoding().GetBytes("");
+            loginClient.SendData(TCPOutPacket.MakeTCPOutPacket(loginClient.OutPacketPool, bData, 0, bData.Length, (int)(TCPGameServerCmds.CMD_SPR_ENTERMAP)));
         }
 
-        private void JoinJin()
+        public void SendNPCSelection(int npcID, int dialogID, int selectionID, DialogItemSelectionInfo? selectItemInfo, Dictionary<int, string>? otherParams)
         {
-
+            C2G_LuaNPCDialog data = new C2G_LuaNPCDialog()
+            {
+                ID = dialogID,
+                NPCID = npcID,
+                SelectionID = selectionID,
+                SelectedItem = selectItemInfo,
+                OtherParams = otherParams,
+            };
+            byte[] bytes = DataHelper.ObjectToBytes<C2G_LuaNPCDialog>(data);
+            loginClient.SendData(TCPOutPacket.MakeTCPOutPacket(loginClient.OutPacketPool, bytes, 0, bytes.Length, (int)(TCPGameServerCmds.CMD_KT_C2G_NPCDIALOG)));
         }
 
-        private void SendMove(Position position)
+        public void SendMove(Position position)
         {
             if (RoleData == null)
             {
@@ -413,23 +551,34 @@ namespace GameClient
             }
             try
             {
-                var newPosition = position;
 
-                Console.WriteLine("Auto move to {0}/{1}", newPosition.PosX, newPosition.PosY);
+                var from = new Vector2(RoleData.PosX, RoleData.PosY);
+                var to = new Vector2(position.PosX, position.PosY);
+
+                var paths = GScene.Instance.FindPath(RoleData, from, to);
+                if (paths == null || paths.Count == 0)
+                {
+                    Console.WriteLine("[AIClient]<SendMove> Khong tim thay duong di");
+                    return;
+                }
+                var lastPos = paths.LastOrDefault();
+                var pathString = string.Join("|", paths.Select(s => string.Format("{0}_{1}", (int)s.x, (int)s.y)).ToArray());
+                Console.WriteLine("Send move to MapId:{0} / PosX:{1} / PosY:{2} / Path:{3}", position.MapId, position.PosX, position.PosY, pathString);
+                Console.WriteLine("LastPos: {0}", lastPos);
                 SpriteMoveData moveData = new SpriteMoveData()
                 {
                     RoleID = RoleID,
                     FromX = RoleData.PosX,
                     FromY = RoleData.PosY,
-                    ToX = newPosition.PosX,
-                    ToY = newPosition.PosY,
-                    PathString = "",
+                    ToX = position.PosX,
+                    ToY = position.PosY,
+                    //PathString = pathString
+                    PathString = ""
                 };
-                byte[] cmdData = DataHelper.ObjectToBytes<SpriteMoveData>(moveData);
-                loginClient.SendData(TCPOutPacket.MakeTCPOutPacket(loginClient.OutPacketPool, cmdData, 0, cmdData.Length, (int)(TCPGameServerCmds.CMD_SPR_MOVE)));
+                byte[] cmdData = DataHelper.ObjectToBytes(moveData);
+                loginClient.SendData(TCPOutPacket.MakeTCPOutPacket(loginClient.OutPacketPool, cmdData, 0, cmdData.Length, (int)TCPGameServerCmds.CMD_SPR_MOVE));
 
-                RoleData.PosX = newPosition.PosX;
-                RoleData.PosY = newPosition.PosY;
+
             }
             catch (Exception ex)
             {
@@ -468,13 +617,13 @@ namespace GameClient
 
         private void AccountVerify()
         {
-            AccountController.AccountVerify(AccessToken, (succes, verify) =>
+            AccountController.AccountVerify(AccessToken!, (succes, verify) =>
             {
                 if (succes && verify != null)
                 {
-                    this.UserID = int.Parse(verify.strPlatformUserID);
+                    this.UserID = int.Parse(verify!.strPlatformUserID);
                     UserToken = verify.strToken;
-                    login2Client.Connect(AIManager.Server, AIManager.ServerPort);
+                    login2Client!.Connect(AIManager.Server, AIManager.ServerPort);
                 }
                 else
                 {

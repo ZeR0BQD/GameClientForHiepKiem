@@ -28,7 +28,7 @@ namespace HSGameEngine.Tools.AStar
         #region Variables Declaration
         // Heap variables are initializated to default, but I like to do it anyway
         private byte[,] mDynObs = null;
-        private byte[] mOpenedDynObsLabels = null;
+        private HashSet<byte> mOpenedDynObsLabels = null;
         private byte[,] mGrid = null;
         private PriorityQueueB<int> mOpen = null;
         private List<PathFinderNode> mClose = new List<PathFinderNode>();
@@ -74,7 +74,7 @@ namespace HSGameEngine.Tools.AStar
         #endregion
 
         #region Constructors
-        public PathFinderFast(byte[,] grid, byte[,] dynObs, byte[] openedDynObsLabels)
+        public PathFinderFast(byte[,] grid, byte[,] dynObs, HashSet<byte> openedDynObsLabels)
         {
             if (grid == null)
                 throw new Exception("Grid cannot be null");

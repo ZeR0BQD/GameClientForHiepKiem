@@ -23,7 +23,7 @@ namespace GameClient.Data
         /// Tên nhân vật
         /// </summary>
         [ProtoMember(2)]
-        public string RoleName { get; set; }
+        public string? RoleName { get; set; }
 
         /// <summary>
         /// Giới tính (0: Nam, 1: Nữ)
@@ -167,37 +167,37 @@ namespace GameClient.Data
         /// Nhiệm vụ của nhân vật
         /// </summary>
         [ProtoMember(26)]
-        public List<TaskData> TaskDataList { get; set; }
+        public List<TaskData>? TaskDataList { get; set; }
 
         /// <summary>
         /// Danh sách vật phẩm trong túi đồ
         /// </summary>
         [ProtoMember(27)]
-        public List<GoodsData> GoodsDataList { get; set; }
+        public List<GoodsData>? GoodsDataList { get; set; }
 
         /// <summary>
         /// Danh Sách Skill
         /// </summary>
         [ProtoMember(28)]
-        public List<SkillData> SkillDataList { get; set; }
+        public List<SkillData>? SkillDataList { get; set; }
 
         /// <summary>
         /// Trạng thái nhiệm vụ
         /// </summary>
         [ProtoMember(29)]
-        public List<NPCTaskState> NPCTaskStateList { get; set; }
+        public List<NPCTaskState>? NPCTaskStateList { get; set; }
 
         /// <summary>
         /// Danh sách kỹ năng chính
         /// </summary>
         [ProtoMember(30)]
-        public string MainQuickBarKeys { get; set; }
+        public string? MainQuickBarKeys { get; set; }
 
         /// <summary>
         /// Danh sách kỹ năng vòng sáng
         /// </summary>
         [ProtoMember(31)]
-        public string OtherQuickBarKeys { get; set; }
+        public string? OtherQuickBarKeys { get; set; }
 
         /// <summary>
         /// Đồng
@@ -209,7 +209,7 @@ namespace GameClient.Data
         /// Tên gian hàng
         /// </summary>
         [ProtoMember(33)]
-        public string StallName { get; set; }
+        public string? StallName { get; set; }
 
         /// <summary>
         /// ID Team hiện tại
@@ -227,7 +227,7 @@ namespace GameClient.Data
         /// Danh sách Buff
         /// </summary>
         [ProtoMember(36)]
-        public List<BufferData> BufferDataList { get; set; }
+        public List<BufferData>? BufferDataList { get; set; }
 
         /// <summary>
         /// Zone ID của máy chủ
@@ -323,13 +323,13 @@ namespace GameClient.Data
         /// Thông số thiết lập Auto
         /// </summary>
         [ProtoMember(52)]
-        public string AutoSettings { get; set; }
+        public string? AutoSettings { get; set; }
 
         /// <summary>
         /// Thiết lập hệ thống
         /// </summary>
         [ProtoMember(53)]
-        public string SystemSettings { get; set; }
+        public string? SystemSettings { get; set; }
 
         /// <summary>
         /// Có đang cưỡi không
@@ -347,25 +347,25 @@ namespace GameClient.Data
         /// Danh sách kỹ năng sống
         /// </summary>
         [ProtoMember(56)]
-        public Dictionary<int, LifeSkillPram> LifeSkills { get; set; }
+        public Dictionary<int, LifeSkillPram>? LifeSkills { get; set; }
 
         /// <summary>
         /// Danh hiệu tạm thời
         /// </summary>
         [ProtoMember(57)]
-        public string Title { get; set; }
+        public string? Title { get; set; }
 
         /// <summary>
         /// Danh hiệu bang hội
         /// </summary>
         [ProtoMember(58)]
-        public string GuildTitle { get; set; }
+        public string? GuildTitle { get; set; }
 
         /// <summary>
         /// Danh sách danh vọng
         /// </summary>
         [ProtoMember(59)]
-        public List<ReputeInfo> Repute { get; set; }
+        public List<ReputeInfo>? Repute { get; set; }
 
         /// <summary>
         /// Vinh dự tài phú
@@ -377,7 +377,7 @@ namespace GameClient.Data
         /// Thông tin nhiệm vụ đã hoàn thành
         /// </summary>
         [ProtoMember(61)]
-        public List<QuestInfo> QuestInfo { get; set; }
+        public List<QuestInfo>? QuestInfo { get; set; }
 
         /// <summary>
         /// Quan hàm
@@ -389,7 +389,7 @@ namespace GameClient.Data
         /// Danh sách danh hiệu bản thân
         /// </summary>
         [ProtoMember(63)]
-        public List<int> SelfTitles { get; set; }
+        public List<int>? SelfTitles { get; set; }
 
         /// <summary>
         /// ID danh hiệu hiện tại của bản thân
@@ -439,7 +439,7 @@ namespace GameClient.Data
         /// Danh sách pet
         /// </summary>
         [ProtoMember(71)]
-        public List<PetData> Pets { get; set; }
+        public List<PetData>? Pets { get; set; }
 
         /// <summary>
         /// Danh hiệu bang hội

@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable disable
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,6 +11,7 @@ namespace GameClient
 {
     public static class Global
     {
+
         #region Thư viện xử lý XML
 
         public static string GetXElementNodePath(XElement element)

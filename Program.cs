@@ -7,14 +7,14 @@ using System.Xml.Serialization;
 
 namespace GameClient
 {
-	class Program
-	{
+    class Program
+    {
         public static bool Started = false;
         static ManualResetEvent _quitEvent = new ManualResetEvent(false);
         private static void Main(string[] args)
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
-            XElement xml = null;
+            XElement? xml = null;
 
             System.Console.WriteLine("Init App Config");
 #if DEBUG
@@ -55,6 +55,9 @@ namespace GameClient
             }
 
             Console.WriteLine("Server started");
+
+            // Khoi tao XaPhuManager de load thong tin Xa Phu tu AutoPath.xml
+            XaPhuManager.Init();
 
             Started = true;
             NameManager.Init();
@@ -106,5 +109,5 @@ namespace GameClient
                 }
             }
         }
-	}
+    }
 }

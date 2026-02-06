@@ -12,27 +12,27 @@ namespace GameClient.SongJin
     public partial class SongJinAIClient
     {
         public long UserID;
-        public string UserToken;
-        public string AccessToken;
+        public string? UserToken;
+        public string? AccessToken;
         public int UserIsAdult;
         public int RoleRandToken;
         public int RoleID;
         public int ServerID;
         public int Token;
 
-        public RoleData RoleData;
+        public RoleData? RoleData;
         public User User;
         public Position? ToPosition;
 
         private const int VerSign = 20140624;
         private const string Key = "Jab2hKa821bJac2Laocb2acah2acacak";
 
-        private TCPClient login2Client;
+        private TCPClient? login2Client;
         private TCPClient loginClient;
 
         private bool IsOnline = false;
-        public Action NextStep { get; set; }
-        public Action<SongJinAIClient> LoginSuccess { get; set; }
+        public Action? NextStep { get; set; }
+        public Action<SongJinAIClient>? LoginSuccess { get; set; }
 
         private System.Timers.Timer timer;
 
@@ -236,10 +236,13 @@ namespace GameClient.SongJin
             UserToken = fields[2];
             UserIsAdult = Convert.ToInt32(fields[3]);
 
-            login2Client.SocketConnect -= LoginClient_SocketConnect;
-            login2Client.MyTCPInPacket.TCPCmdPacketEvent -= MyTCPInPacket_TCPCmdPacketEvent;
-            login2Client.Destroy();
-            login2Client = null;
+            if (login2Client != null)
+            {
+                login2Client.SocketConnect -= LoginClient_SocketConnect;
+                login2Client.MyTCPInPacket.TCPCmdPacketEvent -= MyTCPInPacket_TCPCmdPacketEvent;
+                login2Client.Destroy();
+                login2Client = null;
+            }
 
             loginClient.Connect(AIManager.Server, AIManager.ServerPort);
 
@@ -314,7 +317,7 @@ namespace GameClient.SongJin
                 Vector2 from = new Vector2(RoleData.PosX, RoleData.PosY);
                 Vector2 to = new Vector2(position.PosX, position.PosY);
 
-                var paths = GScene.Instance.FindPath(from, to);
+                var paths = GScene.Instance.FindPath(RoleData, from, to);
                 var pathString = string.Join("|", paths.Select(s => string.Format("{0}_{1}", (int)s.x, (int)s.y)).ToArray());
                 SpriteMoveData moveData = new SpriteMoveData()
                 {
@@ -327,6 +330,9 @@ namespace GameClient.SongJin
                 };
                 byte[] cmdData = DataHelper.ObjectToBytes(moveData);
                 loginClient.SendData(TCPOutPacket.MakeTCPOutPacket(loginClient.OutPacketPool, cmdData, 0, cmdData.Length, (int)TCPGameServerCmds.CMD_SPR_MOVE));
+
+                RoleData.PosX = position.PosX;
+                RoleData.PosY = position.PosY;
             }
             catch (Exception ex)
             {
@@ -336,10 +342,14 @@ namespace GameClient.SongJin
 
         private void ChangeMap(int mapId)
         {
-            var thp = RoleData.GoodsDataList.FirstOrDefault(g => g.GoodsID == 9680);
+            var thp = RoleData?.GoodsDataList?.FirstOrDefault(g => g.GoodsID == 9680);
             if (thp == null)
             {
                 Console.WriteLine("Không tìm thấy Thần hành phù");
+                return;
+            }
+            if (RoleData == null)
+            {
                 return;
             }
             CS_SprUseGoods useGoods = new CS_SprUseGoods();
@@ -494,12 +504,12 @@ namespace GameClient.SongJin
 
         private void AccountVerify()
         {
-            AccountController.AccountVerify(AccessToken, (succes, verify) =>
+            AccountController.AccountVerify(AccessToken ?? string.Empty, (succes, verify) =>
             {
                 if (login2Client == null)
                 {
                     return;
-                }    
+                }
                 if (succes && verify != null)
                 {
                     UserID = int.Parse(verify.strPlatformUserID);

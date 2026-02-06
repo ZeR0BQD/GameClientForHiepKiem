@@ -21,25 +21,7 @@
     <None Remove="Config\first_name.json" />
     <None Remove="Config\male_name.json" />
     <None Remove="Config\users.txt" />
-    <None Remove="MapConfig\BaLangHuyen\Blur.txt" />
-    <None Remove="MapConfig\BaLangHuyen\GrowPoints.xml" />
-    <None Remove="MapConfig\BaLangHuyen\MapSetting.xml" />
-    <None Remove="MapConfig\BaLangHuyen\Monsters.xml" />
-    <None Remove="MapConfig\BaLangHuyen\npcs.xml" />
-    <None Remove="MapConfig\BaLangHuyen\Obs.txt" />
-    <None Remove="MapConfig\BaLangHuyen\Obs.xml" />
-    <None Remove="MapConfig\BaLangHuyen\SafeArea.txt" />
-    <None Remove="MapConfig\BaLangHuyen\teleports.xml" />
-    <None Remove="MapConfig\BaLangHuyen\zones.xml" />
-    <None Remove="MapConfig\TongKimSoCap\Blur.txt" />
-    <None Remove="MapConfig\TongKimSoCap\MapSetting.xml" />
-    <None Remove="MapConfig\TongKimSoCap\Monsters.xml" />
-    <None Remove="MapConfig\TongKimSoCap\npcs.xml" />
-    <None Remove="MapConfig\TongKimSoCap\Obs.txt" />
-    <None Remove="MapConfig\TongKimSoCap\Obs.xml" />
-    <None Remove="MapConfig\TongKimSoCap\SafeArea.txt" />
-    <None Remove="MapConfig\TongKimSoCap\teleports.xml" />
-    <None Remove="MapConfig\TongKimSoCap\zones.xml" />
+    <None Remove="MapConfig\**\*" />
     <None Remove="Positions.xml" />
     <None Remove="Config\users.json" />
     <None Remove="Config\songjin.xml" />
@@ -57,10 +39,11 @@
     <Content Include="Config\*">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="MapConfig\*\*">
+    <Content Include="MapConfig\**\*">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="BouncyCastle.Cryptography" Version="2.4.0" />
     <PackageReference Include="ComponentAce.Compression.Libs.zlib" Version="1.0.4" />
