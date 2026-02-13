@@ -10,6 +10,7 @@ using System.Linq;
 using System.Security.Principal;
 using System.Text;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace GameClient
 {
@@ -78,20 +79,36 @@ namespace GameClient
                 switch (key.KeyChar)
                 {
                     case '1':
-                        Console.WriteLine("[AIManager]<KeyboardTimer_Elapsed> DivideTeams");
-                        Scenarios.SongJinScenario.DivideTeams();
+                        Console.WriteLine("[AIManager]<KeyboardTimer_Elapsed> Init SongJin");
+                        Scenarios.SongJinScenario.Init();
                         break;
                     case '2':
-                        Console.WriteLine("[AIManager]<KeyboardTimer_Elapsed> GoToSongJin");
-                        Scenarios.SongJinScenario.GoToSongJin();
-                        break;
-                    case '3':
-                        Console.WriteLine("[AIManager]<KeyboardTimer_Elapsed> ClickNpcSongJin");
-                        Scenarios.SongJinScenario.ClickNpcSongJin();
-                        break;
-                    case '4':
                         Console.WriteLine("[AIManager]<KeyboardTimer_Elapsed> MoveToXaPhu");
                         Scenarios.SongJinScenario.MoveToXaPhu();
+                        break;
+                    case '3':
+                        Console.WriteLine("[AIManager]<KeyboardTimer_Elapsed> SendGMCommand");
+                        Scenarios.SongJinScenario.SendGMCommand("GoTo 32 4947 4283"); ;
+                        break;
+                    case '4':
+                        Console.WriteLine("[AIManager]<KeyboardTimer_Elapsed> SendMove");
+                        Scenarios.SongJinScenario.SendMove(new Position { PosX = 1372, PosY = 1920 });
+                        break;
+                    case '5':
+                        Console.WriteLine("[AIManager]<KeyboardTimer_Elapsed> AutoMoveAround");
+                        Scenarios.SongJinScenario.AutoMoveAroundForAll();
+                        break;
+                    case '6':
+                        Scenarios.SongJinScenario.DivideTeams();
+                        break;
+                    case '7':
+                        Scenarios.SongJinScenario.GoToSongJin();
+                        break;
+                    case '8':
+                        Scenarios.SongJinScenario.ClickNpcSongJin();
+                        break;
+                    case '9':
+                        Scenarios.SongJinScenario.AutoMoveToPKForAll();
                         break;
                     default:
                         break;

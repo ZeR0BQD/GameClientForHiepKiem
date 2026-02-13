@@ -42,9 +42,9 @@ namespace GameClient
 
             //CreateAccounts(xml, AIManager.MaxRole);
 
-            SongJinConfig.Init();
 
-            using (var stream = System.IO.File.OpenRead("Config/Positions.xml"))
+
+            using (var stream = System.IO.File.OpenRead("Config/PositionsID72.xml"))
             {
                 var serializer = new XmlSerializer(typeof(List<Position>));
                 var points = serializer.Deserialize(stream) as List<Position>;
@@ -62,6 +62,7 @@ namespace GameClient
             Started = true;
             NameManager.Init();
             AIManager.Init();
+            EventTimeChecker.Init();
             //SongJinAIManager.Init();
 
             _quitEvent.WaitOne();

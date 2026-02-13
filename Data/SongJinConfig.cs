@@ -42,8 +42,6 @@ namespace GameClient.Data
             songJinConfig.JinSigninPos.MapId = (int)Global.GetSafeAttributeLong(xml, "JinSignPos", "MapId");
             songJinConfig.JinSigninPos.PosX = (int)Global.GetSafeAttributeLong(xml, "JinSignPos", "PosX");
             songJinConfig.JinSigninPos.PosY = (int)Global.GetSafeAttributeLong(xml, "JinSignPos", "PosY");
-
-            SongJinAIManager.Config = songJinConfig;
         }
 	}
 

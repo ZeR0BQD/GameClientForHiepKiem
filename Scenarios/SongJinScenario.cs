@@ -16,59 +16,102 @@ namespace GameClient.Scenarios
         private static Random _random = new Random();
 
         /// <summary>
-        /// Danh sach thanh vien doi Song (nua dau cua Clients)
+        /// Dictionary tra cuu team theo RoleID
+        /// Key = RoleID, Value = Dictionary<AIClient, "Song" hoac "Jin">
         /// </summary>
-        public static List<AIClient> TeamSong { get; private set; } = new();
+        public static Dictionary<int, Dictionary<AIClient, string>> TeamMap { get; private set; } = new();
+
+        public static List<AIClient> TeamSong
+        {
+            get
+            {
+                var list = new List<AIClient>();
+                foreach (var dict in TeamMap.Values)
+                {
+                    foreach (var kvp in dict)
+                    {
+                        if (kvp.Value == "Song")
+                        {
+                            list.Add(kvp.Key);
+                        }
+                    }
+                }
+                return list;
+            }
+        }
+
+        public static List<AIClient> TeamJin
+        {
+            get
+            {
+                var list = new List<AIClient>();
+                foreach (var dict in TeamMap.Values)
+                {
+                    foreach (var kvp in dict)
+                    {
+                        if (kvp.Value == "Jin")
+                        {
+                            list.Add(kvp.Key);
+                        }
+                    }
+                }
+                return list;
+            }
+        }
 
         /// <summary>
-        /// Danh sach thanh vien doi Jin (nua sau cua Clients)
+        /// Khoi tao kich ban
         /// </summary>
-        public static List<AIClient> TeamJin { get; private set; } = new();
+        public static void Init()
+        {
+            Console.WriteLine("[SongJinScenario]<Init> Khoi tao kich ban Song Jin");
+
+
+            DivideTeams();
+            GoToSongJin();
+            ClickNpcSongJin();
+        }
 
         /// <summary>
-        /// Danh sach xen ke Song-Jin (index 0=Song, 1=Jin, 2=Song, 3=Jin...)
-        /// </summary>
-        public static List<AIClient> AllTeams { get; private set; } = new();
-
-        /// <summary>
-        /// Chia doi: lay AIManager.Clients, chia lam 2
-        /// - Nua dau (index 0 → half-1) → TeamSong
-        /// - Nua sau (index half → end) → TeamJin
+        /// Chia doi: lay AIManager.Clients, chia xen ke
+        /// - Index chan -> TeamSong
+        /// - Index le -> TeamJin
+        /// Dong thoi ghi vao TeamMap de tra cuu team theo RoleID
         /// </summary>
         public static void DivideTeams()
         {
             var clients = AIManager.Clients;
-            int total = clients.Count;
-            int half = total / 2;
+            TeamMap.Clear();
 
-            TeamSong.Clear();
-            TeamJin.Clear();
-
-            // Nua dau cho TeamSong
-            for (int i = 0; i < half; i++)
+            for (int i = 0; i < clients.Count; i++)
             {
-                TeamSong.Add(clients[i]);
+                var client = clients[i];
+                string team = (i % 2 == 0) ? "Song" : "Jin";
+
+                if (!TeamMap.ContainsKey(client.RoleID))
+                {
+                    TeamMap[client.RoleID] = new Dictionary<AIClient, string>();
+                }
+                TeamMap[client.RoleID][client] = team;
             }
 
-            // Nua sau cho TeamJin
-            for (int i = half; i < total; i++)
+            Console.WriteLine("[SongJinScenario]<DivideTeams> Chia doi thanh cong");
+        }
+
+        /// <summary>
+        /// Tra cuu team cua 1 client theo RoleID
+        /// Tra ve "Song", "Jin" hoac "Unknown"
+        /// </summary>
+        public static string GetTeam(int roleID)
+        {
+            if (TeamMap.TryGetValue(roleID, out var dict))
             {
-                TeamJin.Add(clients[i]);
+                foreach (var team in dict.Values)
+                {
+                    return team;
+                }
             }
-
-
-            // Build danh sach xen ke Song-Jin
-            AllTeams.Clear();
-            int maxCount = Math.Max(TeamSong.Count, TeamJin.Count);
-            for (int i = 0; i < maxCount; i++)
-            {
-                if (i < TeamSong.Count)
-                    AllTeams.Add(TeamSong[i]);
-                if (i < TeamJin.Count)
-                    AllTeams.Add(TeamJin[i]);
-            }
-
-            Console.WriteLine($"[SongJinScenario]<DivideTeams> TeamSong: {TeamSong.Count}, TeamJin: {TeamJin.Count}, AllTeams: {AllTeams.Count}");
+            return "Unknown";
         }
 
         /// <summary>
@@ -79,15 +122,25 @@ namespace GameClient.Scenarios
             var songNPC = MapConfigHelper.GetNPCByCode(SONG_NPC_CODE);
             var jinNPC = MapConfigHelper.GetNPCByCode(JIN_NPC_CODE);
 
-            // TeamSong di chuyen den Tống Hiệu Uý
+            // Clear action queue của tất cả client
+            foreach (var dict in TeamMap.Values)
+            {
+                foreach (var client in dict.Keys)
+                {
+                    client.ClearActions();
+                }
+            }
+
+            // TeamSong di chuyen den Tong Hieu Uy
             if (songNPC != null)
             {
-                Console.WriteLine($"[SongJinScenario]<GoToSongJin> TeamSong di chuyen den {songNPC.Name}");
-                foreach (var client in TeamSong)
+                var teamSong = TeamSong;
+                Console.WriteLine($"[SongJinScenario]<GoToSongJin> TeamSong di chuyen den {songNPC.Name}. Count: {teamSong.Count}");
+                foreach (var client in teamSong)
                 {
-                    int offsetX = _random.Next(10, 30);
-                    int offsetY = _random.Next(10, 30);
-                    client.SendGMCommand($"GoTo 32 {songNPC.X + offsetX} {songNPC.Y + offsetY}");
+                    int offsetX = _random.Next(-10, 30);
+                    int offsetY = _random.Next(-10, 30);
+                    client.AddAction(() => client.SendMove(new Position() { PosX = songNPC.X + offsetX, PosY = songNPC.Y + offsetY }));
                 }
             }
             else
@@ -95,15 +148,16 @@ namespace GameClient.Scenarios
                 Console.WriteLine("[SongJinScenario]<GoToSongJin> Khong tim thay Tong Hieu Uy");
             }
 
-            // TeamJin di chuyen den Kim Hiệu Uý
+            // TeamJin di chuyen den Kim Hieu Uy
             if (jinNPC != null)
             {
-                Console.WriteLine($"[SongJinScenario]<GoToSongJin> TeamJin di chuyen den {jinNPC.Name}");
-                foreach (var client in TeamJin)
+                var teamJin = TeamJin;
+                Console.WriteLine($"[SongJinScenario]<GoToSongJin> TeamJin di chuyen den {jinNPC.Name}. Count: {teamJin.Count}");
+                foreach (var client in teamJin)
                 {
-                    int offsetX = _random.Next(10, 30);
-                    int offsetY = _random.Next(10, 30);
-                    client.SendGMCommand($"GoTo 32 {jinNPC.X - offsetX} {jinNPC.Y - offsetY}");
+                    int offsetX = _random.Next(-10, 30);
+                    int offsetY = _random.Next(-10, 30);
+                    client.AddAction(() => client.SendMove(new Position() { PosX = jinNPC.X - offsetX, PosY = jinNPC.Y - offsetY }));
                 }
             }
             else
@@ -113,23 +167,25 @@ namespace GameClient.Scenarios
         }
 
         /// <summary>
-        /// Click npc 
-        /// <summary>
-        /// 
-
+        /// Click NPC dang ky Song Jin theo team cua tung client
+        /// </summary>
         public static void ClickNpcSongJin()
         {
-            // TeamSong click Tong Hieu Uy
-            for (int i = 0; i < AllTeams.Count; i++)
+            foreach (var dict in TeamMap.Values)
             {
-                var client = AllTeams[i];
-                if (i % 2 == 0)
+                foreach (var kvp in dict)
                 {
-                    client.NPCClick(2130706699);
-                }
-                else
-                {
-                    client.NPCClick(2130706700);
+                    var client = kvp.Key;
+                    var team = kvp.Value;
+
+                    if (team == "Song")
+                    {
+                        client.NPCClick(2130706699);
+                    }
+                    else if (team == "Jin")
+                    {
+                        client.NPCClick(2130706700);
+                    }
                 }
             }
         }
@@ -146,12 +202,44 @@ namespace GameClient.Scenarios
             }
         }
 
-        public static void AutoMoveAround()
+
+
+        /// <summary>
+        /// Send GM command to all clients
+        /// </summary>
+        /// 
+
+        public static void SendGMCommand(string command)
         {
-            Console.WriteLine("[SongJinScenario]<AutoMoveAround> Di chuyen tat ca clients di xung quanh");
+            Console.WriteLine($"[SongJinScenario]<SendGMCommandToAll> Send GM command to all clients: {command}");
+            foreach (var client in AIManager.Clients)
+            {
+                client.SendGMCommand(command);
+            }
+        }
+
+        public static void SendMove(Position pos)
+        {
+            Console.WriteLine($"[SongJinScenario]<SendGMCommandToAll> SendMove to all clients");
+            foreach (var client in AIManager.Clients)
+            {
+                client.SendMove(pos);
+            }
+        }
+
+        public static void AutoMoveAroundForAll()
+        {
             foreach (var client in AIManager.Clients)
             {
                 client.AutoMoveAround();
+            }
+        }
+
+        public static void AutoMoveToPKForAll()
+        {
+            foreach (var client in AIManager.Clients)
+            {
+                client.AutoMoveToPKSongJin();
             }
         }
     }

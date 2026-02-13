@@ -48,7 +48,7 @@ namespace GameClient.Data
         /// Chuỗi mã hóa đoạn đường cần di chuyển
         /// </summary>
         [ProtoMember(6)]
-        public string PathString { get; set; }
+        public string PathString { get; set; } = "";
 
         /// <summary>
         /// Động tác di chuyển

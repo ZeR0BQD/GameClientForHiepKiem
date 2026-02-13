@@ -1,4 +1,4 @@
-﻿#nullable disable
+﻿
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -150,5 +150,7 @@ namespace GameClient
             var len = Math.Min(array.GetLength(0) * array.GetLength(1) * System.Runtime.InteropServices.Marshal.SizeOf(typeof(T)), buffer.Length);
             Buffer.BlockCopy(buffer, 0, array, 0, len);
         }
+
+
     }
 }
