@@ -57,7 +57,7 @@ namespace GameClient
                 return;
             }
 
-            // Khoi tao timer kiem tra lien tuc (giong keyboardTimer trong AIManager)
+            // Khoi tao timer kiem tra lien tuc 
             _checkTimer = new System.Timers.Timer(CHECK_INTERVAL_MS);
             _checkTimer.Elapsed += CheckTimer_Elapsed;
             _checkTimer.Start();

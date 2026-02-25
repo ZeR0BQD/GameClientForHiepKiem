@@ -1,4 +1,5 @@
-﻿using GameClient.Databases;
+﻿using GameClient.Data;
+using GameClient.Databases;
 using GameClient.MapConfig;
 using GameClient.Scenes;
 using HSGameEngine.GameEngine.Network;
@@ -33,6 +34,7 @@ namespace GameClient
         /// So luong client da login thanh cong
         /// </summary>
         private static int CurrentRoleCount = 0;
+        private static readonly object _clientLock = new object();
 
         private const string Account = "itsgamecenter2025{0}";
 
@@ -80,7 +82,7 @@ namespace GameClient
                 {
                     case '1':
                         Console.WriteLine("[AIManager]<KeyboardTimer_Elapsed> Init SongJin");
-                        Scenarios.SongJinScenario.Init();
+                        Scenarios.SongJinScenario.StartSongJin();
                         break;
                     case '2':
                         Console.WriteLine("[AIManager]<KeyboardTimer_Elapsed> MoveToXaPhu");
@@ -88,18 +90,19 @@ namespace GameClient
                         break;
                     case '3':
                         Console.WriteLine("[AIManager]<KeyboardTimer_Elapsed> SendGMCommand");
-                        Scenarios.SongJinScenario.SendGMCommand("GoTo 32 4947 4283"); ;
+                        Scenarios.SongJinScenario.SendGMCommandForAll("GoTo 1 5670 3000");
                         break;
                     case '4':
-                        Console.WriteLine("[AIManager]<KeyboardTimer_Elapsed> SendMove");
-                        Scenarios.SongJinScenario.SendMove(new Position { PosX = 1372, PosY = 1920 });
+                        Console.WriteLine("[AIManager]<KeyboardTimer_Elapsed> SendGMCommand");
+                        Scenarios.SongJinScenario.SendMove(new Position()
+                        {
+                            PosX = 6981,
+                            PosY = 3653
+                        });
                         break;
                     case '5':
                         Console.WriteLine("[AIManager]<KeyboardTimer_Elapsed> AutoMoveAround");
                         Scenarios.SongJinScenario.AutoMoveAroundForAll();
-                        break;
-                    case '6':
-                        Scenarios.SongJinScenario.DivideTeams();
                         break;
                     case '7':
                         Scenarios.SongJinScenario.GoToSongJin();
@@ -139,18 +142,27 @@ namespace GameClient
             AIClient client = new AIClient(ServerID, user.Id, user.Email);
             client.LoginSuccess = (cl) =>
             {
-                Clients.Add(client);
-                CurrentRoleCount++;
-                Console.WriteLine($"[AIManager]<LoginNewAI> CurrentRoleCount: {CurrentRoleCount}/{MaxRole}");
+                lock (_clientLock)
+                {
+                    Clients.Add(client);
+                }
 
-                //// Khi tat ca client da login, tu dong chay scenario
-                //if (CurrentRoleCount >= MaxRole)
-                //{
-                //    Console.WriteLine("[AIManager]<LoginNewAI> All clients logged in, starting SongJin scenario...");
-                //    Scenarios.SongJinScenario.DivideTeams();
-                //    Scenarios.SongJinScenario.GoToSongJin();
-                //}
+                int count = Interlocked.Increment(ref CurrentRoleCount);
+                Console.WriteLine($"[AIManager]<LoginNewAI> CurrentRoleCount: {count}/{MaxRole}");
+
+                Console.WriteLine($"Skill Data: {0}", client.RoleData.SkillDataList);
+                client.SendGMCommand("GoTo 32 6319 3342");
+                //client.SendGMCommand("GoTo 32 2037 1153");
+
+                if (count >= MaxRole)
+                {
+                    Thread.Sleep(3000);
+                    Console.WriteLine("[AIManager]<LoginNewAI> All clients logged in, starting SongJin scenario...");
+                    Scenarios.SongJinScenario.StartSongJin();
+                }
+
             };
+
             client.Login(user.UserName, user.Password);
         }
     }

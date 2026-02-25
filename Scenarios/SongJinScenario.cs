@@ -59,17 +59,15 @@ namespace GameClient.Scenarios
             }
         }
 
+
         /// <summary>
         /// Khoi tao kich ban
         /// </summary>
-        public static void Init()
+        public static void StartSongJin()
         {
             Console.WriteLine("[SongJinScenario]<Init> Khoi tao kich ban Song Jin");
-
-
+            ClearActionsForAll();
             DivideTeams();
-            GoToSongJin();
-            ClickNpcSongJin();
         }
 
         /// <summary>
@@ -96,6 +94,7 @@ namespace GameClient.Scenarios
             }
 
             Console.WriteLine("[SongJinScenario]<DivideTeams> Chia doi thanh cong");
+            GoToSongJin();
         }
 
         /// <summary>
@@ -114,13 +113,16 @@ namespace GameClient.Scenarios
             return "Unknown";
         }
 
+
         /// <summary>
         /// Di chuyen 2 team den NPC tuong ung voi random offset
         /// </summary>
         public static void GoToSongJin()
         {
-            var songNPC = MapConfigHelper.GetNPCByCode(SONG_NPC_CODE);
-            var jinNPC = MapConfigHelper.GetNPCByCode(JIN_NPC_CODE);
+            // NPC chon phe (Tong/Kim Hieu Uy) nam o map 32 - TuongDuong
+            string songJinMapCode = MapConfigHelper.GetMapCode(32) ?? "TuongDuong";
+            var songNPC = MapConfigHelper.GetNPCByCode(songJinMapCode, SONG_NPC_CODE);
+            var jinNPC = MapConfigHelper.GetNPCByCode(songJinMapCode, JIN_NPC_CODE);
 
             // Clear action queue của tất cả client
             foreach (var dict in TeamMap.Values)
@@ -135,12 +137,13 @@ namespace GameClient.Scenarios
             if (songNPC != null)
             {
                 var teamSong = TeamSong;
-                Console.WriteLine($"[SongJinScenario]<GoToSongJin> TeamSong di chuyen den {songNPC.Name}. Count: {teamSong.Count}");
+                Console.WriteLine($"[SongJinScenario]<GoToSongJin> TeamSong di chuyen den {songNPC.Name}. So Luong: {teamSong.Count}");
                 foreach (var client in teamSong)
                 {
                     int offsetX = _random.Next(-10, 30);
                     int offsetY = _random.Next(-10, 30);
-                    client.AddAction(() => client.SendMove(new Position() { PosX = songNPC.X + offsetX, PosY = songNPC.Y + offsetY }));
+                    client.AddAction("Song_Move", () => client.SendMove(new Position() { PosX = songNPC.X + offsetX, PosY = songNPC.Y + offsetY }));
+                    client.AddAction("Song_Click", () => ClickNpcSongJin(client));
                 }
             }
             else
@@ -157,7 +160,8 @@ namespace GameClient.Scenarios
                 {
                     int offsetX = _random.Next(-10, 30);
                     int offsetY = _random.Next(-10, 30);
-                    client.AddAction(() => client.SendMove(new Position() { PosX = jinNPC.X - offsetX, PosY = jinNPC.Y - offsetY }));
+                    client.AddAction("Jin_Move", () => client.SendMove(new Position() { PosX = jinNPC.X - offsetX, PosY = jinNPC.Y - offsetY }));
+                    client.AddAction("Jin_Click", () => ClickNpcSongJin(client));
                 }
             }
             else
@@ -169,23 +173,33 @@ namespace GameClient.Scenarios
         /// <summary>
         /// Click NPC dang ky Song Jin theo team cua tung client
         /// </summary>
+        public static void ClickNpcSongJin(AIClient client)
+        {
+            var team = GetTeam(client.RoleID);
+            if (team == "Song")
+            {
+                client.NPCClick(2130706699);
+                client.ReadyAction = false;
+                client.AddAction("MoveToTeleporter", () => client.MoveToTeleport());
+            }
+            else if (team == "Jin")
+            {
+                client.NPCClick(2130706700);
+                client.ReadyAction = false;
+                client.AddAction("MoveToTeleporter", () => client.MoveToTeleport());
+            }
+        }
+
+        /// <summary>
+        /// Click NPC cho tat ca client (Dung cho debug hoac force click)
+        /// </summary>
         public static void ClickNpcSongJin()
         {
             foreach (var dict in TeamMap.Values)
             {
                 foreach (var kvp in dict)
                 {
-                    var client = kvp.Key;
-                    var team = kvp.Value;
-
-                    if (team == "Song")
-                    {
-                        client.NPCClick(2130706699);
-                    }
-                    else if (team == "Jin")
-                    {
-                        client.NPCClick(2130706700);
-                    }
+                    ClickNpcSongJin(kvp.Key);
                 }
             }
         }
@@ -209,12 +223,24 @@ namespace GameClient.Scenarios
         /// </summary>
         /// 
 
-        public static void SendGMCommand(string command)
+        public static void SendGMCommandForAll(string command)
         {
             Console.WriteLine($"[SongJinScenario]<SendGMCommandToAll> Send GM command to all clients: {command}");
+
+            string[] parts = command.Split(' ');
+            // Kiểm tra xem có phải lệnh GoTo chuyển Map không (GoTo + MapId + X + Y)
+            bool isTeleportToNewMap = parts.Length == 4 && parts[0] == "GoTo";
+
             foreach (var client in AIManager.Clients)
             {
-                client.SendGMCommand(command);
+                if (isTeleportToNewMap)
+                {
+                    // Nếu dịch chuyển sang map mới, xóa sạch hàng đợi hành động cũ
+                    client.ClearActions();
+                }
+                client.SetStateReadyAction(false);
+                // Thêm lệnh vào hàng đợi để thực hiện lần lượt
+                client.AddAction("SendGMCommand", () => { client.SendGMCommand(command); });
             }
         }
 
@@ -240,6 +266,13 @@ namespace GameClient.Scenarios
             foreach (var client in AIManager.Clients)
             {
                 client.AutoMoveToPKSongJin();
+            }
+        }
+        public static void ClearActionsForAll()
+        {
+            foreach (var client in AIManager.Clients)
+            {
+                client.ClearActions();
             }
         }
     }

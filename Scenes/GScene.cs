@@ -12,18 +12,28 @@ namespace GameClient.Scenes
     {
         private PathFinderFast? pathFinderFast;
 
-        private static GScene? instance;
+        private static Dictionary<string, GScene> _loadedScenes = new Dictionary<string, GScene>();
         private static object locker = new object();
-        public static GScene Instance
-        {
-            get
-            {
-                lock (locker)
-                {
-                    if (instance == null) instance = new GScene();
 
-                    return instance;
+        /// <summary>
+        /// Lấy GScene theo MapCode. Nếu chưa có sẽ load mới và cache lại.
+        /// </summary>
+        /// <param name="mapCode"></param>
+        /// <returns></returns>
+        public static GScene Get(string mapCode)
+        {
+            lock (locker)
+            {
+                if (_loadedScenes.TryGetValue(mapCode, out var scene))
+                {
+                    return scene;
                 }
+
+                var newScene = new GScene();
+                newScene.Init(mapCode);
+                _loadedScenes[mapCode] = newScene;
+
+                return newScene;
             }
         }
 
@@ -79,9 +89,9 @@ namespace GameClient.Scenes
         public HashSet<byte> OpenedDynamicObsLabels { get; set; }
 
         /// <summary>
-        /// Danh sách Teleport, Key=Code, Value=Vector2(X, Y)
+        /// Danh sách Teleport, Key=Code, Value=TeleportData
         /// </summary>
-        public Dictionary<int, Position> Teleports { get; set; } = new Dictionary<int, Position>();
+        public Dictionary<int, TeleportData> Teleports { get; set; } = new Dictionary<int, TeleportData>();
 
         public void Init(string map)
         {
@@ -148,11 +158,26 @@ namespace GameClient.Scenes
                     XDocument doc = XDocument.Load(teleportPath);
                     foreach (var teleport in doc.Descendants("Teleport"))
                     {
-                        int code = (int)teleport.Attribute("Code");
-                        int x = (int)teleport.Attribute("X");
-                        int y = (int)teleport.Attribute("Y");
+                        int code = (int?)teleport.Attribute("Code") ?? 0;
+                        int x = (int?)teleport.Attribute("X") ?? 0;
+                        int y = (int?)teleport.Attribute("Y") ?? 0;
+                        int to = (int?)teleport.Attribute("To") ?? 0;
+                        int toX = (int?)teleport.Attribute("ToX") ?? 0;
+                        int toY = (int?)teleport.Attribute("ToY") ?? 0;
+                        int radius = (int?)teleport.Attribute("Radius") ?? 0;
+                        int camp = (int?)teleport.Attribute("Camp") ?? 0;
 
-                        this.Teleports[code] = new Position() { PosX = x, PosY = y };
+                        this.Teleports[code] = new TeleportData()
+                        {
+                            Code = code,
+                            X = x,
+                            Y = y,
+                            To = to,
+                            ToX = toX,
+                            ToY = toY,
+                            Radius = radius,
+                            Camp = camp
+                        };
                     }
                 }
                 catch (Exception ex)

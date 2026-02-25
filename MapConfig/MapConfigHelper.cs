@@ -15,9 +15,10 @@ namespace GameClient.MapConfig
         private static readonly string ConfigPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "MapConfig", "MapConfig.xml");
 
         /// <summary>
-        /// Danh sach NPC cua map hien tai
+        /// Cache danh sach NPC theo mapCode, key = mapCode (vi du: "TuongDuong")
+        /// Moi map duoc load 1 lan va luu lai, khong bi ghi de khi client khac o map khac
         /// </summary>
-        public static List<NPCInfo>? CurrentNPCs { get; private set; }
+        private static readonly Dictionary<string, List<NPCInfo>> _npcCache = new Dictionary<string, List<NPCInfo>>();
 
         /// <summary>
         /// Load config từ file XML (tự động gọi nếu chưa load)
@@ -65,38 +66,49 @@ namespace GameClient.MapConfig
         }
 
         /// <summary>
-        /// Tim NPC theo Code
+        /// Tim NPC theo mapCode va Code cua NPC
+        /// Moi map co danh sach NPC rieng biet, khong bi conflict khi nhieu client o cac map khac nhau
         /// </summary>
+        /// <param name="mapCode">MapCode (vi du: "TuongDuong")</param>
         /// <param name="code">Code cua NPC (vi du: 55 = Tong Hieu Uy)</param>
         /// <returns>NPCInfo hoac null neu khong tim thay</returns>
-        public static NPCInfo? GetNPCByCode(int code)
+        public static NPCInfo? GetNPCByCode(string mapCode, int code)
         {
-            return CurrentNPCs?.FirstOrDefault(n => n.Code == code);
+            if (_npcCache.TryGetValue(mapCode, out var npcs))
+            {
+                return npcs.FirstOrDefault(n => n.Code == code);
+            }
+            return null;
         }
 
         /// <summary>
-        /// Load danh sach NPC tu file npcs.xml cua map
+        /// Load danh sach NPC tu file npcs.xml cua map.
+        /// Co cache: neu da load roi thi khong load lai, tranh conflict khi nhieu client o cung map.
         /// </summary>
         /// <param name="mapCode">MapCode (vi du: "TuongDuong")</param>
         private static void LoadNPCs(string mapCode)
         {
+            // Da co trong cache roi, khong can load lai
+            if (_npcCache.ContainsKey(mapCode)) return;
+
             string npcPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "MapConfig", mapCode, "npcs.xml");
 
             if (!File.Exists(npcPath))
             {
                 Console.WriteLine($"[MapConfigHelper]<LoadNPCs> Khong tim thay file NPC: {npcPath}");
-                CurrentNPCs = null;
+                // Luu empty list de tranh load lai nhieu lan
+                _npcCache[mapCode] = new List<NPCInfo>();
                 return;
             }
 
             try
             {
-                CurrentNPCs = new List<NPCInfo>();
+                var npcList = new List<NPCInfo>();
                 XDocument doc = XDocument.Load(npcPath);
 
                 foreach (var npc in doc.Descendants("NPC"))
                 {
-                    CurrentNPCs.Add(new NPCInfo
+                    npcList.Add(new NPCInfo
                     {
                         Code = int.Parse(npc.Attribute("Code")?.Value ?? "0"),
                         Name = npc.Attribute("Name")?.Value ?? "",
@@ -110,12 +122,13 @@ namespace GameClient.MapConfig
                     });
                 }
 
-                Console.WriteLine($"[MapConfigHelper]<LoadNPCs> Da load {CurrentNPCs.Count} NPCs tu map {mapCode}");
+                _npcCache[mapCode] = npcList;
+                Console.WriteLine($"[MapConfigHelper]<LoadNPCs> Da load {npcList.Count} NPCs tu map {mapCode}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[MapConfigHelper]<LoadNPCs> Loi khi load NPC: {ex.Message}");
-                CurrentNPCs = null;
+                _npcCache[mapCode] = new List<NPCInfo>();
             }
         }
 
@@ -135,9 +148,9 @@ namespace GameClient.MapConfig
             }
 
             Console.WriteLine($"[MapConfigHelper]<InitSceneByMapId> Init scene với MapCode: {mapCode} (ID: {mapId})");
-            GScene.Instance.Init(mapCode);
+            GScene.Get(mapCode);
 
-            // Load NPC sau khi init scene
+            // Load NPC sau khi init scene (co cache, neu da load roi se bo qua)
             LoadNPCs(mapCode);
 
             return mapCode;
