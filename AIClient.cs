@@ -361,6 +361,7 @@ namespace GameClient
             _isChasing = true;
 
             AIClient? targetClient = null;
+            float minDistSq = float.MaxValue;
 
             List<RoleDataMini> snapshot;
             lock (_roleLock)
@@ -375,8 +376,16 @@ namespace GameClient
                 {
                     if (client.RoleData.CurrentHP > 0)
                     {
-                        targetClient = client;
-                        break;
+                        /// Tính khoảng cách bình phương (không cần sqrt để so sánh)
+                        float dx = client.RoleData.PosX - RoleData!.PosX;
+                        float dy = client.RoleData.PosY - RoleData!.PosY;
+                        float distSq = dx * dx + dy * dy;
+
+                        if (distSq < minDistSq)
+                        {
+                            minDistSq = distSq;
+                            targetClient = client;
+                        }
                     }
                 }
             }
@@ -1025,13 +1034,13 @@ namespace GameClient
                 switch (res)
                 {
                     case (int)UseSkillResult.Success:
-                        // Skill thanh cong, dung yen, Timer.Attack tu gui skill tiep
+                        /// Skill thành công
                         break;
                     case (int)UseSkillResult.Skill_Is_Cooldown:
-                        // Server dang cooldown, khong lam gi, de Timer gui lai
+                        // Server dang cooldown
                         break;
                     case (int)UseSkillResult.Target_Not_In_Range:
-                        // Ke dich ra ngoai tam danh - queue ExecuteChaseAndAttack qua AddAction
+                        // Ke dich ra ngoai tam danh
                         if (ListRoleDataMini.Count > 0)
                         {
                             ClearActions();
