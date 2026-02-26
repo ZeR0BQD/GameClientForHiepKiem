@@ -193,7 +193,7 @@ namespace GameClient.Scenes
             Point to = new Point((int)toPos.x / GridSizeX, (int)toPos.y / GridSizeY);
 
             /// Nếu vị trí đích nằm trên ô có vật cản
-			if (!this.CanMove(to))
+            if (!this.CanMove(to))
             {
                 /// Tìm một điểm bất kỳ trên đường nối 2 điểm mà không chứa vật cản
                 if (this.FindLinearNoObsMaxPoint(roleData, to, out Point maxPoint))

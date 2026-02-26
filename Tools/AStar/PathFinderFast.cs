@@ -35,7 +35,7 @@ namespace HSGameEngine.Tools.AStar
         private bool mStop = false;
         private bool mStopped = true;
         private int mHoriz = 0;
-        //private HeuristicFormula                mFormula              = HeuristicFormula.Manhattan;
+        //private HeuristicFormula        mFormula       = HeuristicFormula.Manhattan;
         private HeuristicFormula mFormula = HeuristicFormula.DiagonalShortCut;
         private bool mDiagonals = true;
         private int mHEstimate = 2;
@@ -89,7 +89,7 @@ namespace HSGameEngine.Tools.AStar
 
             // This should be done at the constructor, for now we leave it here.
             if (Math.Log(mGridX, 2) != (int)Math.Log(mGridX, 2) ||
-                Math.Log(mGridY, 2) != (int)Math.Log(mGridY, 2))
+              Math.Log(mGridY, 2) != (int)Math.Log(mGridY, 2))
                 throw new Exception("Invalid Grid, size in X and Y must be power of 2");
 
             //if (mCalcGrid == null || mCalcGrid.Length != (mGridX * mGridY))
@@ -231,8 +231,8 @@ namespace HSGameEngine.Tools.AStar
                 mStop = false;
                 mStopped = false;
                 mCloseNodeCounter = 0;
-                //mOpenNodeValue      += 2;
-                //mCloseNodeValue     += 2;
+                //mOpenNodeValue   += 2;
+                //mCloseNodeValue   += 2;
                 mOpen.Clear();
                 mClose.Clear();
 
@@ -383,9 +383,9 @@ namespace HSGameEngine.Tools.AStar
                         //When it is removed, it will be already closed, it will be ignored automatically
                         //if (tmpGrid[newLocation].Status == 1)
                         //{
-                        //    //int removeX   = newLocation & gridXMinus1;
-                        //    //int removeY   = newLocation >> gridYLog2;
-                        //    mOpen.RemoveLocation(newLocation);
+                        //  //int removeX  = newLocation & gridXMinus1;
+                        //  //int removeY  = newLocation >> gridYLog2;
+                        //  mOpen.RemoveLocation(newLocation);
                         //}
 
                         //if (tmpGrid[newLocation].Status != 1)

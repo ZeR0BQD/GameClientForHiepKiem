@@ -191,7 +191,7 @@ namespace GameClient
 				}
 				else
 				{
-                    KTDebug.LogError("IPV6 support!");
+          KTDebug.LogError("IPV6 support!");
 					_Socket = new Socket(AddressFamily.InterNetworkV6, SocketType.Stream, ProtocolType.Tcp);
 				}
 #else
@@ -221,7 +221,7 @@ namespace GameClient
 
             //if (null != SocketConnect)
             //{
-            //    SocketConnect(this, new SocketConnectEventArgs() { RemoteEndPoint = GetRemoteEndPoint(), Error = "Connect Fail", NetSocketType = (int)NetSocketTypes.SOCKET_CONN });
+            //  SocketConnect(this, new SocketConnectEventArgs() { RemoteEndPoint = GetRemoteEndPoint(), Error = "Connect Fail", NetSocketType = (int)NetSocketTypes.SOCKET_CONN });
             //}
 
             return false;
@@ -266,12 +266,12 @@ namespace GameClient
         public bool SendData(TCPOutPacket tcpOutPacket)
         {
             if (((TCPGameServerCmds)tcpOutPacket.PacketCmdID).ToString() == "CMD_SPR_CHECK" ||
-                ((TCPGameServerCmds)tcpOutPacket.PacketCmdID).ToString() == "CMD_SPR_POSITION" ||
-                ((TCPGameServerCmds)tcpOutPacket.PacketCmdID).ToString() == "CMD_SPR_USEGOODS" ||
-                ((TCPGameServerCmds)tcpOutPacket.PacketCmdID).ToString() == "CMD_SPR_MOVE" ||
-                ((TCPGameServerCmds)tcpOutPacket.PacketCmdID).ToString() == "CMD_SPR_UPDATE_ROLEDATA" ||
-                ((TCPGameServerCmds)tcpOutPacket.PacketCmdID).ToString() == "CMD_SYNC_TIME_BY_CLIENT"
-                )
+              ((TCPGameServerCmds)tcpOutPacket.PacketCmdID).ToString() == "CMD_SPR_POSITION" ||
+              ((TCPGameServerCmds)tcpOutPacket.PacketCmdID).ToString() == "CMD_SPR_USEGOODS" ||
+              ((TCPGameServerCmds)tcpOutPacket.PacketCmdID).ToString() == "CMD_SPR_MOVE" ||
+              ((TCPGameServerCmds)tcpOutPacket.PacketCmdID).ToString() == "CMD_SPR_UPDATE_ROLEDATA" ||
+              ((TCPGameServerCmds)tcpOutPacket.PacketCmdID).ToString() == "CMD_SYNC_TIME_BY_CLIENT"
+              )
             { }
             else
             {
@@ -425,7 +425,7 @@ namespace GameClient
 
                 /*if (null != SocketConnect)
                 {
-                    SocketConnect(this, new SocketConnectEventArgs() { RemoteEndPoint = GetRemoteEndPoint(), Error = "Connect Fail", NetSocketType = (int) NetSocketTypes.SOCKET_CONN });
+                  SocketConnect(this, new SocketConnectEventArgs() { RemoteEndPoint = GetRemoteEndPoint(), Error = "Connect Fail", NetSocketType = (int) NetSocketTypes.SOCKET_CONN });
                 }*/
             }
         }
@@ -473,7 +473,7 @@ namespace GameClient
 
                 SocketError socketError = SocketError.Success;
                 int recvLength = 0;
-                if (_Socket.Connected)  //添加判断是否是connected，避免被close后，抛出System.ObjectDisposedException: The object was used after being disposed异常
+                if (_Socket.Connected) //添加判断是否是connected，避免被close后，抛出System.ObjectDisposedException: The object was used after being disposed异常
                 {
                     recvLength = _Socket.EndReceive(iar, out socketError);
                 }
@@ -518,63 +518,63 @@ namespace GameClient
 
         }
         /*
-		/// <summary>
-		/// 接收数据通知函数，使用新版本接口，已确认在苹果64位上引发崩溃
-		/// </summary>
-		/// <returns>
-		/// The received.
-		/// </returns>
+            /// <summary>
+            /// 接收数据通知函数，使用新版本接口，已确认在苹果64位上引发崩溃
+            /// </summary>
+            /// <returns>
+            /// The received.
+            /// </returns>
         private void SocketReceived(object obj, SocketAsyncEventArgs e)
         {
-			try
-			{
-                if (null == _Socket)
-				{
-					return;
-				}
-				
-                if (!_Socket.Connected)  //添加判断是否是connected，避免被close后，抛出System.ObjectDisposedException: The object was used after being disposed异常
+                try
                 {
+            if (null == _Socket)
+                    {
+                        return;
+                    }
+
+            if (!_Socket.Connected) //添加判断是否是connected，避免被close后，抛出System.ObjectDisposedException: The object was used after being disposed异常
+            {
+              return;
+            }
+
+            if (e.SocketError != SocketError.Success || e.BytesTransferred <= 0)  //yaozb修复空指针
+                    {
+                        //断开成功通知函数
+                    DoSocketClosed();
+                        return;
+                    }
+
+            // 统计接收字节数
+            snTotalRecvCount += e.BytesTransferred;
+
+              //处理收到的包
+              if (!_MyTCPInPacket.WriteData(e.Buffer, 0, e.BytesTransferred))
+              {
+                return;
+              }
+
+            // 收到第一个包，停止连接超时检测
+            if (!bSocketConnectCallbacked)
+            {
+              bSocketConnectCallbacked = true;
+              StopConnectTimer();
+            }
+
+            if (!_Socket.ReceiveAsync(mReceiveAsyncArgs))
+              SocketReceived(null, mReceiveAsyncArgs);
                     return;
                 }
-				
-                if (e.SocketError != SocketError.Success || e.BytesTransferred <= 0)   //yaozb修复空指针
-				{
-					//断开成功通知函数
-        			DoSocketClosed();
-					return;
-				}
-
-                // 统计接收字节数
-                snTotalRecvCount += e.BytesTransferred;
-
-	            //处理收到的包
-	            if (!_MyTCPInPacket.WriteData(e.Buffer, 0, e.BytesTransferred))
-	            {
-	                return;
-	            }
-
-                // 收到第一个包，停止连接超时检测
-                if (!bSocketConnectCallbacked)
+                catch(Exception ex)
                 {
-                    bSocketConnectCallbacked = true;
-                    StopConnectTimer();
-                }
+            //KTDebug.LogException(ex);
+          }
 
-                if (!_Socket.ReceiveAsync(mReceiveAsyncArgs))
-                    SocketReceived(null, mReceiveAsyncArgs);
-				return;
-			}
-			catch(Exception ex)
-			{
-                //KTDebug.LogException(ex);
-            }
-			
-            //如果是接收失败, 则就要立即告诉界面，同时通知客户端无法连接数据库
-			if (null != SocketConnect)
-			{
-				SocketConnect(this, new SocketConnectEventArgs() { RemoteEndPoint = GetRemoteEndPoint(), Error = "Failed", NetSocketType = (int)NetSocketTypes.SOCKET_RECV });
-			}
+          //如果是接收失败, 则就要立即告诉界面，同时通知客户端无法连接数据库
+                if (null != SocketConnect)
+                {
+                    SocketConnect(this, new SocketConnectEventArgs() { RemoteEndPoint = GetRemoteEndPoint(), Error = "Failed", NetSocketType = (int)NetSocketTypes.SOCKET_RECV });
+                }
         }
         */
         /// <summary>

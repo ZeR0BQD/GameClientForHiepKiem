@@ -12,17 +12,17 @@ namespace HSGameEngine.Tools.AStarEx
 {
     public class ANode
     {
-		/** 节点列号 */
-		public int x;
-		
-		/** 节点行号 */
-		public int y;
-		
-		public ANode(int x, int y)
-		{
-			this.x = x;
-			this.y = y;
-		}		
+        /** 节点列号 */
+        public int x;
+
+        /** 节点行号 */
+        public int y;
+
+        public ANode(int x, int y)
+        {
+            this.x = x;
+            this.y = y;
+        }
 
         /// <summary>
         /// 返回唯一标识，主要用于binaryStack的辞典

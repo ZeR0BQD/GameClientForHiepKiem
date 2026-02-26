@@ -12,23 +12,23 @@ namespace HSGameEngine.Tools.AStarEx
     {
         private BinaryStack _open;
         private Dictionary<long, bool> _closed;
-		private NodeGrid _grid;
-		private int _endNodeX;
+        private NodeGrid _grid;
+        private int _endNodeX;
         private int _endNodeY;
-		private int _startNodeX;
+        private int _startNodeX;
         private int _startNodeY;
-		private List<ANode> _path;
-		private double _straightCost = 1.0;
-		private double _diagCost = 1.4142135623730951;
+        private List<ANode> _path;
+        private double _straightCost = 1.0;
+        private double _diagCost = 1.4142135623730951;
         public const double costMultiplier = 1.0;
 
         //open count 内部有60个点需要检测，那这条路肯定很难寻,返回失败就行
         //gm命令 -modifyastar 100可以修改
         public static int MaxOpenNodeCount = 200;
-		
-		public AStar()
-		{
-		}
+
+        public AStar()
+        {
+        }
 
         //查寻路径
         public List<ANode> find(NodeGrid grid, int copySceneID)
@@ -41,10 +41,10 @@ namespace HSGameEngine.Tools.AStarEx
 
             return null;
         }
-		
-		public bool findPath(NodeGrid grid, int copySceneID)
-		{
-			_grid = grid;
+
+        public bool findPath(NodeGrid grid, int copySceneID)
+        {
+            _grid = grid;
             if (null == _open)
             {
                 _open = new BinaryStack("f");
@@ -65,21 +65,21 @@ namespace HSGameEngine.Tools.AStarEx
             {
                 _closed.Clear();
             }
-			
-			_startNodeX = 0;
+
+            _startNodeX = 0;
             _startNodeY = 0;
-			_endNodeX = 0;
+            _endNodeX = 0;
             _endNodeY = 0;
-			
+
             _grid.Nodes[_startNodeX, _startNodeY].g = 0;
             _grid.Nodes[_startNodeX, _startNodeY].h = diagonal(_startNodeX, _startNodeY);
             _grid.Nodes[_startNodeX, _startNodeY].f = _grid.Nodes[_startNodeX, _startNodeY].g + _grid.Nodes[_startNodeX, _startNodeY].h;
 
-			return search(copySceneID);
-		}
-		
-		public bool search(int copySceneID)
-		{
+            return search(copySceneID);
+        }
+
+        public bool search(int copySceneID)
+        {
 
             try
             {
@@ -109,7 +109,7 @@ namespace HSGameEngine.Tools.AStarEx
                             if (_open.getLength() > MaxOpenNodeCount)
                             {
                                 LogManager.WriteLog(LogTypes.Warning, String.Format("AStar:search() too many nodes were found: start({0}, {1}), to({2}, {3}), MaxOpenNodeCount={4}",
-                                    _startNodeX, _startNodeY, _endNodeX, _endNodeY, MaxOpenNodeCount));
+                                  _startNodeX, _startNodeY, _endNodeX, _endNodeY, MaxOpenNodeCount));
                                 return false;
                             }
 
@@ -120,7 +120,7 @@ namespace HSGameEngine.Tools.AStarEx
 
                             bool isTestWalkable = _grid.CanEnter(testx, testy, copySceneID);
                             if (test == node || !isTestWalkable ||
-                                !_grid.IsDiagonalWalkable(node, test))
+                              !_grid.IsDiagonalWalkable(node, test))
                             {
                                 continue;
                             }
@@ -189,8 +189,8 @@ namespace HSGameEngine.Tools.AStarEx
             {
                 System.Diagnostics.Debug.WriteLine(e.Message);
             }
-			
-			return true;
+
+            return true;
         }
 
         /// <summary>
@@ -203,51 +203,51 @@ namespace HSGameEngine.Tools.AStarEx
             return _closed.ContainsKey(node) ? 0 : -1;
         }
 
-		private void buildPath()
-		{
-			_path = new List<ANode>();
+        private void buildPath()
+        {
+            _path = new List<ANode>();
             ANode node = new ANode(_endNodeX, _endNodeY);
             _path.Add(node);
 
             int count = 0;
             while (!(node.x == _startNodeX && node.y == _startNodeY))
-			{
+            {
                 int px = _grid.Nodes[node.x, node.y].parentX;
                 int py = _grid.Nodes[node.x, node.y].parentY;
                 node = new ANode(px, py);
                 _path.Insert(0, node);
                 count++;
-			}
+            }
 
             System.Diagnostics.Debug.WriteLine(string.Format("Find Path count={0}", count));
-		}
-		
-		/** 判断两个节点的对角线路线是否可走 */
-		private bool isDiagonalWalkable( long node1, long node2 )
-		{
+        }
+
+        /** 判断两个节点的对角线路线是否可走 */
+        private bool isDiagonalWalkable(long node1, long node2)
+        {
             return _grid.IsDiagonalWalkable(node1, node2);
             //if (node1.walkable && node2.walkable)
             //{
-            //    return true;
+            //  return true;
             //}
 
             //return false;
-		}
-		
-		private double diagonal(int nodex, int nodey)
-		{
-			double dx = nodex - _endNodeX < 0 ? _endNodeX - nodex : nodex - _endNodeX;
-			double dy = nodey - _endNodeY < 0 ? _endNodeY - nodey : nodey - _endNodeY;
-			double diag = dx < dy ? dx : dy;
-			double straight = dx + dy;
-			return _diagCost * diag + _straightCost * (straight - 2 * diag);
-		}
-		
-	//---------------------------------------get/set functions-----------------------------//
-		
-		public List<ANode> path
-		{
+        }
+
+        private double diagonal(int nodex, int nodey)
+        {
+            double dx = nodex - _endNodeX < 0 ? _endNodeX - nodex : nodex - _endNodeX;
+            double dy = nodey - _endNodeY < 0 ? _endNodeY - nodey : nodey - _endNodeY;
+            double diag = dx < dy ? dx : dy;
+            double straight = dx + dy;
+            return _diagCost * diag + _straightCost * (straight - 2 * diag);
+        }
+
+        //---------------------------------------get/set functions-----------------------------//
+
+        public List<ANode> path
+        {
             get { return _path; }
-		}
+        }
     }
 }

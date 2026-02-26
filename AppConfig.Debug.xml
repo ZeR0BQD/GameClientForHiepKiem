@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Config>
-	<GameClient MaxRole="1" Address="210.211.97.224" ServerPort="3005" ServerID="4"
+	<GameClient MaxRole="10" Address="210.211.97.224" ServerPort="3005" ServerID="4"
 				LoginAPIUrl="https://account.inplay.vn/api/login"
 				RegisterAPIUrl="https://account.inplay.vn/api/register"
 				VerifyAPIUrl="https://account.inplay.vn/api/verifyaccount" />

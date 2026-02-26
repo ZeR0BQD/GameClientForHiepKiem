@@ -13,7 +13,7 @@ namespace GameClient
 #if DEBUG
         private long HeartTicks = 10000;
 #else
-        private long HeartTicks = 60000;
+    private long HeartTicks = 60000;
 #endif
         public SpriteHeart(TCPClient? client, int roleID, int token)
         {

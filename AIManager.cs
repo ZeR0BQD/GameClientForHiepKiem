@@ -29,10 +29,6 @@ namespace GameClient
 
         private static System.Timers.Timer? timer;
         private static System.Timers.Timer? keyboardTimer;
-
-        /// <summary>
-        /// So luong client da login thanh cong
-        /// </summary>
         private static int CurrentRoleCount = 0;
         private static readonly object _clientLock = new object();
 
@@ -133,6 +129,19 @@ namespace GameClient
         private static void Logout(AIClient client)
         {
             client.Logout();
+        }
+
+        /// <summary>
+        /// Tìm AIClient đang chạy trong process theo RoleID.
+        /// Dùng để đọc trực tiếp RoleData.PosX/Y (vị trí thực đã được timer cập nhật)
+        /// thay vì dùng tọa độ đích từ server.
+        /// </summary>
+        public static AIClient? GetClientByRoleID(int roleID)
+        {
+            lock (_clientLock)
+            {
+                return Clients.FirstOrDefault(c => c.RoleID == roleID);
+            }
         }
 
         private static void LoginNewAI(UserModel user)

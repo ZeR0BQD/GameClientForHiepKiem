@@ -10,8 +10,8 @@ namespace GameClient.Scenarios
     public class SongJinScenario
     {
         // NPC Code constants
-        private const int SONG_NPC_CODE = 55;  // Tống Hiệu Uý
-        private const int JIN_NPC_CODE = 51;   // Kim Hiệu Uý
+        private const int SONG_NPC_CODE = 55; // Tống Hiệu Uý
+        private const int JIN_NPC_CODE = 51;  // Kim Hiệu Uý
 
         private static Random _random = new Random();
 
