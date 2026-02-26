@@ -702,14 +702,16 @@ namespace GameClient
                                 newPosY = y;
                             }
 
-                            if (CurrentState == AIState.Attack && ListRoleDataMini.Count > 0)
+                            if (CurrentState == AIState.Attack && ListRoleDataMini.Count > 0
+                                && moveData.RoleID == ListRoleDataMini[0].RoleID)
                             {
-                                var target = ListRoleDataMini.FirstOrDefault(r => r.RoleID == TargetID);
-                                if (target != null)
-                                {
-                                    target.PosX = newPosX;
-                                    target.PosY = newPosY;
-                                }
+                                // Cập nhật vị trí mục tiêu trước khi đuổi theo
+                                roleDataMini.PosX = newPosX;
+                                roleDataMini.PosY = newPosY;
+                                // Reset cờ để ExecuteChaseAndAttack có thể chạy lại
+                                _isChasing = false;
+
+                                ExecuteChaseAndAttack();
                             }
                         }
                     }
