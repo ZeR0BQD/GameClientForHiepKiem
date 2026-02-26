@@ -360,14 +360,7 @@ namespace GameClient
             if (_isChasing) return;
             _isChasing = true;
 
-            // Xoa ke dich da chet khoi danh sach
-            lock (_roleLock)
-            {
-                ListRoleDataMini.RemoveAll(role => role.HP <= 0);
-            }
-
             AIClient? targetClient = null;
-            RoleDataMini? targetMini = null;
 
             List<RoleDataMini> snapshot;
             lock (_roleLock)
@@ -380,20 +373,22 @@ namespace GameClient
                 var client = AIManager.GetClientByRoleID(mini.RoleID);
                 if (client != null && client.RoleData != null)
                 {
-                    targetClient = client;
-                    targetMini = mini;
-                    break;
+                    if (client.RoleData.CurrentHP > 0)
+                    {
+                        targetClient = client;
+                        break;
+                    }
                 }
             }
 
-            if (targetClient != null && targetMini != null)
+            if (targetClient != null)
             {
                 int targetPosX = targetClient.RoleData!.PosX;
                 int targetPosY = targetClient.RoleData!.PosY;
 
                 Console.WriteLine(
-                    "[AIClient]<ExecuteChaseAndAttack> Target RoleID={0} | Server=({1},{2}) | Actual=({3},{4})",
-                    targetMini.RoleID, targetMini.PosX, targetMini.PosY, targetPosX, targetPosY
+                    "[AIClient]<ExecuteChaseAndAttack> Target RoleID={0} Actual=({1},{2})",
+                    targetClient.RoleData!.RoleID, targetPosX, targetPosY
                 );
 
                 bool moveSuccess = SendMove(new Position() { PosX = targetPosX, PosY = targetPosY });
@@ -405,8 +400,6 @@ namespace GameClient
                 }
                 else
                 {
-                    /// SendMove thất bại (vd: FindPath null do 2 bot quá gần nhau)
-                    /// Dùng AddAction thay vì gọi trực tiếp để tránh stack call gây stuck state
                     _isChasing = false;
                     CurrentState = AIState.AutoMoveAround;
                     ClearActions();
@@ -851,12 +844,12 @@ namespace GameClient
                             if (CurrentState == AIState.Attack && ListRoleDataMini.Count > 0
                                 && moveData.RoleID == ListRoleDataMini[0].RoleID)
                             {
-                                // Cập nhật vị trí mục tiêu trước khi đuổi theo
                                 roleDataMini.PosX = newPosX;
                                 roleDataMini.PosY = newPosY;
-                                /// Queue ExecuteChaseAndAttack qua AddAction thay vì gọi trực tiếp
-                                /// để chạy đúng trong timer loop, tránh xáo trộn CurrentState
+
                                 _isChasing = false;
+                                MoveDone = true;
+                                ReadyAction = true;
                                 ClearActions();
                                 AddAction("ExecuteChaseAndAttack", () =>
                                 {
