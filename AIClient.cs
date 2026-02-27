@@ -729,7 +729,7 @@ namespace GameClient
             else if (command == TCPGameServerCmds.CMD_INIT_GAME)
             {
                 RoleData = DataHelper.BytesToObject<RoleData>(tcpInPacket.GetPacketBytes(), 0, tcpInPacket.PacketDataSize);
-                SetUpRoleData();
+                // SetUpRoleData(); //chỗ này tạm thời command, chỉ dùng để setup trên severtest
                 Thread.Sleep(1000);
                 GamePlay();
 
