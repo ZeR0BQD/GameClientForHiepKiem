@@ -58,7 +58,7 @@ namespace GameClient
 
         private readonly object _roleLock = new object();
 
-        public AIState CurrentState { get; set; } = AIState.Idle;
+        public AIState CurrentState { get; set; } = AIState.AutoMoveAround;
         protected Queue<(string Name, Action Action)> ActionQueue = new Queue<(string Name, Action Action)>();
         private readonly object _queueLock = new object();
         public void AddAction(string name, Action action)
@@ -197,30 +197,28 @@ namespace GameClient
                     case AIState.Death:
                         ListRoleDataMini.Clear();
                         ClearActions();
+                        MoveDone = true;
+                        ReadyAction = true;
                         AddAction("ClientRevive", () =>
                         {
                             ClientRevive(1);
                         });
-                        CurrentState = AIState.REALIVE;
+                        CurrentState = AIState.Idle;
                         break;
                     case AIState.REALIVE:
                         ReadyAction = true;
                         MoveDone = true;
                         Console.WriteLine("[AIClient] Role REALIVE");
-                        /// Chỉ add action nếu chưa có trong queue (tránh add trùng khi REALIVE bị kích nhiều lần)
-                        bool alreadyAdded;
-                        lock (_queueLock)
+                        /// Xóa sạch mọi Action cũ đang kẹt
+                        ClearActions();
+
+                        // Chỉ add hành động chạy đến cổng dịch chuyển
+                        AddAction("MoveToTeleport", () =>
                         {
-                            alreadyAdded = ActionQueue.Any(a => a.Name == "MoveToTeleport");
-                        }
-                        if (!alreadyAdded)
-                        {
-                            AddAction("MoveToTeleport", () =>
-                            {
-                                MoveToTeleport();
-                            });
-                        }
-                        CurrentState = AIState.Move;
+                            MoveToTeleport();
+                        });
+
+                        CurrentState = AIState.Idle;
                         break;
                     default:
                         break;
@@ -369,23 +367,23 @@ namespace GameClient
                 snapshot = ListRoleDataMini.ToList();
             }
 
-            foreach (var mini in snapshot)
-            {
-                var client = AIManager.GetClientByRoleID(mini.RoleID);
-                if (client != null && client.RoleData != null)
-                {
-                    if (client.RoleData.CurrentHP > 0)
-                    {
-                        /// Tính khoảng cách bình phương (không cần sqrt để so sánh)
-                        float dx = client.RoleData.PosX - RoleData!.PosX;
-                        float dy = client.RoleData.PosY - RoleData!.PosY;
-                        float distSq = dx * dx + dy * dy;
+            // Lọc ra danh sách bot đang tồn tại (loại bỏ người chơi thực sự)
+            List<AIClient> botsInView = AIManager.GetClientsFromRoleDataMini(snapshot);
 
-                        if (distSq < minDistSq)
-                        {
-                            minDistSq = distSq;
-                            targetClient = client;
-                        }
+            // Tìm bot gần nhất còn sống
+            foreach (var client in botsInView)
+            {
+                if (client.RoleData != null && client.RoleData.CurrentHP > 0)
+                {
+                    // Tính khoảng cách bình phương
+                    float dx = client.RoleData.PosX - RoleData!.PosX;
+                    float dy = client.RoleData.PosY - RoleData!.PosY;
+                    float distSq = dx * dx + dy * dy;
+
+                    if (distSq < minDistSq)
+                    {
+                        minDistSq = distSq;
+                        targetClient = client;
                     }
                 }
             }
@@ -405,7 +403,15 @@ namespace GameClient
                 if (moveSuccess)
                 {
                     _isChasing = false;
-                    CurrentState = AIState.Attack;
+                    // Để nguyên CurrentState là Move do SendMove đã gán.
+                    // Xếp hàng việc chuyển sang trạng thái đánh (Attack) vào hàng đợi.
+                    // Chỉ khi Timer_Elapsed đếm đủ MoveTime và trả MoveDone = true, action này mới được chạy.
+                    ClearActions();
+                    AddAction("FinishChase_SwitchToAttack", () =>
+                    {
+                        Console.WriteLine($"[AIClient]<FinishChase> Da toi noi, chuyen sang state Attack.");
+                        CurrentState = AIState.Attack;
+                    });
                 }
                 else
                 {
@@ -486,96 +492,6 @@ namespace GameClient
             }
             return (long)(time * 1000);
         }
-
-
-
-        /// <summary>
-        /// Nội suy tọa độ thực tế của nhân vật dựa trên path đã vẽ và thời gian đã di chuyển
-        /// </summary>
-        /// <param name="paths">Danh sách waypoints của lần SendMove gần nhất</param>
-        /// <param name="moveStartTick">MoveTick CŨ thời điểm bắt đầu di chuyển lần đó</param>
-        /// <returns>Tọa độ thực tế tại thời điểm hiện tại</returns>
-        protected Vector2 GetCurrentActualPosition(List<Vector2> paths, long moveStartTick)
-        {
-            if (paths == null || paths.Count == 0 || RoleData == null)
-            {
-                return new Vector2(RoleData?.PosX ?? 0, RoleData?.PosY ?? 0);
-            }
-
-            /// Thời gian đã trôi qua kể từ khi bắt đầu di chuyển (ms)
-            long elapsedMs = Global.GetCurrentTime() - moveStartTick;
-
-            float velocity = RoleData.MoveSpeed * 15;
-            if (velocity <= 0)
-            {
-                return paths[0];
-            }
-
-            Vector2 prevPoint = paths[0];
-            double accumulatedMs = 0;
-
-            for (int i = 1; i < paths.Count; i++)
-            {
-                Vector2 nextPoint = paths[i];
-                float segmentDistance = Vector2.Distance(prevPoint, nextPoint);
-                double segmentTimeMs = (segmentDistance / velocity) * 1000.0;
-
-                if (accumulatedMs + segmentTimeMs >= elapsedMs)
-                {
-                    /// Nhân vật đang trong đoạn [prevPoint  nextPoint]
-                    /// t = tỉ lệ đã đi được trên đoạn này (0.0  1.0)
-                    double timeIntoSegment = elapsedMs - accumulatedMs;
-                    float t = (float)(timeIntoSegment / segmentTimeMs);
-                    t = Math.Clamp(t, 0f, 1f);
-
-                    float actualX = prevPoint.x + t * (nextPoint.x - prevPoint.x);
-                    float actualY = prevPoint.y + t * (nextPoint.y - prevPoint.y);
-
-                    Console.WriteLine(
-                        "[AIClient]<GetCurrentActualPosition> Segment {0}->{1} | t={2:F2} | ActualPos=({3:F0},{4:F0})",
-                        prevPoint, nextPoint, t, actualX, actualY
-                    );
-
-                    return new Vector2(actualX, actualY);
-                }
-
-                accumulatedMs += segmentTimeMs;
-                prevPoint = nextPoint;
-            }
-
-            /// Đã đi hết path (elapsedMs vượt quá tổng thời gian)  trả về điểm cuối
-            return paths[paths.Count - 1];
-        }
-
-
-
-        /// <summary>
-        /// Khởi động timer 100ms cập nhật RoleData.PosX/Y liên tục theo vị trí thực tế.
-        /// Timer tự dừng khi moveDone = true (đã đến đích).
-        /// </summary>
-        private void StartPositionUpdateTimer()
-        {
-            /// Dừng timer cũ nếu đang chạy
-            _positionUpdateTimer?.Stop();
-            _positionUpdateTimer?.Dispose();
-
-            _positionUpdateTimer = new System.Timers.Timer(100);
-            _positionUpdateTimer.Elapsed += (sender, e) =>
-            {
-                if (RoleData == null || MoveDone)
-                {
-                    _positionUpdateTimer?.Stop();
-                    return;
-                }
-
-                Vector2 actualPos = GetCurrentActualPosition(_currentMovePaths, MoveTick);
-                RoleData.PosX = (int)actualPos.x;
-                RoleData.PosY = (int)actualPos.y;
-            };
-            _positionUpdateTimer.AutoReset = true;
-            _positionUpdateTimer.Start();
-        }
-
 
 
 
@@ -690,7 +606,6 @@ namespace GameClient
                         MoveTick = Global.GetCurrentTime();
                         MoveDone = false;
                         this.CurrentState = AIState.AutoMoveAround;
-                        StartPositionUpdateTimer();
                         break;
                     }
 
@@ -757,6 +672,12 @@ namespace GameClient
                             role.MaxHP = data.MaxHP;
                         }
                     }
+                }
+
+                if (RoleData.CurrentHP <= 0)
+                {
+                    ClearActions();
+                    CurrentState = AIState.Death;
                 }
 
             }
@@ -914,22 +835,6 @@ namespace GameClient
 
 
 
-            }
-            else if (command == TCPGameServerCmds.CMD_KT_EVENT_NOTIFICATION)
-            {
-                // G2C_EventNotification notification = DataHelper.BytesToObject<G2C_EventNotification>(tcpInPacket.GetPacketBytes(), 0, tcpInPacket.PacketDataSize);
-                //Console.WriteLine($"[AIClient]<ProcessNotification> EventName:{notification.EventName} ");
-
-                //// Kiểm tra nếu ShortDetail bắt đầu bằng "TIME|"
-                //if (!string.IsNullOrEmpty(notification.ShortDetail) && notification.ShortDetail.StartsWith("TIME|"))
-                //{
-                //    string[] parts = notification.ShortDetail.Split('|');
-                //    if (parts.Length >= 2 && int.TryParse(parts[1], out int seconds))
-                //    {
-                //        // seconds = 184 (số giây)
-                //        Console.WriteLine($"[AIClient]<ProcessNotification> Thoi gian con lai: {seconds} giay");
-                //    }
-                //}
             }
             else if (command == TCPGameServerCmds.CMD_KT_SHOW_NOTIFICATIONTIP)
             {
@@ -1460,13 +1365,6 @@ namespace GameClient
             try
             {
 
-                if (!MoveDone && _currentMovePaths.Count > 0)
-                {
-                    Vector2 actualPos = GetCurrentActualPosition(_currentMovePaths, MoveTick);
-                    RoleData.PosX = (int)actualPos.x;
-                    RoleData.PosY = (int)actualPos.y;
-                }
-
                 MoveTick = Global.GetCurrentTime();
 
                 var from = new Vector2(RoleData.PosX, RoleData.PosY);
@@ -1512,13 +1410,10 @@ namespace GameClient
                 RoleData.PosX = moveData.ToX;
                 RoleData.PosY = moveData.ToY;
 
-                StartPositionUpdateTimer();
 
                 this.CurrentState = AIState.Move;
                 MoveDone = false;
                 ReadyAction = false;
-
-                Console.WriteLine($"[AIClient]<SendMove> ReadyAction: {ReadyAction} | MoveDone: {MoveDone}");
                 return true;
 
             }

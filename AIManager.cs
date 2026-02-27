@@ -132,15 +132,23 @@ namespace GameClient
         }
 
         /// <summary>
-        /// Tìm AIClient đang chạy trong process theo RoleID.
-        /// Dùng để đọc trực tiếp RoleData.PosX/Y (vị trí thực đã được timer cập nhật)
-        /// thay vì dùng tọa độ đích từ server.
+        /// Từ danh sách RoleDataMini mà server trả về trong tầm nhìn (gồm cả người chơi thực và bot),
+        /// lọc ra những role nào là bot đang tồn tại trong AIManager và trả về danh sách AIClient tương ứng.
         /// </summary>
-        public static AIClient? GetClientByRoleID(int roleID)
+        /// <param name="listRoleDataMini">Danh sách role trong tầm nhìn do server gửi về</param>
+        /// <returns>Danh sách AIClient là bot đang chạy xuất hiện trong tầm nhìn</returns>
+        public static List<AIClient> GetClientsFromRoleDataMini(List<RoleDataMini> listRoleDataMini)
         {
             lock (_clientLock)
             {
-                return Clients.FirstOrDefault(c => c.RoleID == roleID);
+                // Tập hợp RoleID của tất cả bot đang chạy để tra cứu nhanh O(1)
+                var botRoleIDs = new HashSet<int>(Clients.Select(c => c.RoleID));
+
+                // Lọc những RoleDataMini có RoleID trùng với bot, rồi map sang AIClient tương ứng
+                return listRoleDataMini
+                    .Where(r => botRoleIDs.Contains(r.RoleID))
+                    .Select(r => Clients.First(c => c.RoleID == r.RoleID))
+                    .ToList();
             }
         }
 

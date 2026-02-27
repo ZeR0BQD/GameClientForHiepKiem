@@ -178,13 +178,13 @@ namespace GameClient.Scenarios
             var team = GetTeam(client.RoleID);
             if (team == "Song")
             {
-                client.NPCClick(2130706699);
+                client.NPCClick(2130706579);
                 client.ReadyAction = false;
                 client.AddAction("MoveToTeleporter", () => client.MoveToTeleport());
             }
             else if (team == "Jin")
             {
-                client.NPCClick(2130706700);
+                client.NPCClick(2130706580);
                 client.ReadyAction = false;
                 client.AddAction("MoveToTeleporter", () => client.MoveToTeleport());
             }
